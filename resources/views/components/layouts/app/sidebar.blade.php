@@ -12,8 +12,20 @@
             </a>
 
             <flux:navlist variant="outline">
-                <flux:navlist.group heading="Platform" class="grid">
+                <flux:navlist.group heading="Training" class="grid">
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>Dashboard</flux:navlist.item>
+                    <flux:navlist.item icon="users" :href="route('clients.index')" :current="request()->routeIs('clients.*')" wire:navigate>Clients</flux:navlist.item>
+                    <flux:navlist.item icon="calendar-days" :href="route('sessions.index')" :current="request()->routeIs('sessions.*')" wire:navigate>Sessions</flux:navlist.item>
+                </flux:navlist.group>
+
+                <flux:navlist.group heading="Pricing" class="grid">
+                    <flux:navlist.item icon="rectangle-stack" :href="route('plans.index')" :current="request()->routeIs('plans.*')" wire:navigate>Plans</flux:navlist.item>
+                    <flux:navlist.item icon="sparkles" :href="route('services.index')" :current="request()->routeIs('services.*')" wire:navigate>Services</flux:navlist.item>
+                </flux:navlist.group>
+
+                <flux:navlist.group heading="Reports" class="grid">
+                    <flux:navlist.item icon="chart-bar" :href="route('reports.monthly')" :current="request()->routeIs('reports.monthly')" wire:navigate>Monthly report</flux:navlist.item>
+                    <flux:navlist.item icon="document-chart-bar" :href="route('reports.annual')" :current="request()->routeIs('reports.annual')" wire:navigate>Annual report</flux:navlist.item>
                 </flux:navlist.group>
             </flux:navlist>
 
@@ -117,6 +129,8 @@
         </flux:header>
 
         {{ $slot }}
+
+        <flux:toast position="top end" />
 
         @fluxScripts
     </body>
