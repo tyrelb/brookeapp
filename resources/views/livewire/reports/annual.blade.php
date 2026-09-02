@@ -2,7 +2,7 @@
     <x-page-header title="Annual report" :subtitle="'Tax year '.$report['year']">
         <x-slot:actions>
             <flux:button icon="chevron-left" wire:click="previous" />
-            <flux:input wire:model.live="year" type="number" min="2000" max="2100" class="w-28" />
+            <div class="w-28"><flux:input wire:model.live="year" type="number" min="2000" max="2100" /></div>
             <flux:button icon="chevron-right" wire:click="next" />
             <flux:button icon="arrow-down-tray" variant="primary" wire:click="exportCsv">Export CSV</flux:button>
         </x-slot:actions>

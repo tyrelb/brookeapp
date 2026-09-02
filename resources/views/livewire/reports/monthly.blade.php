@@ -2,7 +2,7 @@
     <x-page-header title="Monthly report" :subtitle="$report['label']">
         <x-slot:actions>
             <flux:button icon="chevron-left" wire:click="previous" />
-            <flux:input wire:model.live="month" type="month" class="w-44" />
+            <div class="w-44"><flux:input wire:model.live="month" type="month" /></div>
             <flux:button icon="chevron-right" wire:click="next" />
             <flux:button :href="route('reports.annual', ['year' => substr($month, 0, 4)])" wire:navigate>Annual</flux:button>
         </x-slot:actions>
