@@ -1,8 +1,9 @@
 <?php
 
-use Illuminate\Foundation\Inspiring;
-use Illuminate\Support\Facades\Artisan;
+use Illuminate\Support\Facades\Schedule;
 
-Artisan::command('inspire', function () {
-    $this->comment(Inspiring::quote());
-})->purpose('Display an inspiring quote')->hourly();
+// Post membership fees each morning (Pacific time) for clients whose billing day has arrived.
+Schedule::command('billing:post-monthly-fees')
+    ->dailyAt('06:00')
+    ->timezone('America/Vancouver')
+    ->withoutOverlapping();
