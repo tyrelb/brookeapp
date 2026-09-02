@@ -1,25 +1,61 @@
-# Laravel + Livewire Starter Kit
+# BrookeApp
 
-## Introduction
+Billing and **Fitness Wallet** tracking for personal trainers. Built with Laravel 12, Livewire 4 and Flux.
 
-Our Laravel + [Livewire](https://livewire.laravel.com) starter kit provides a robust, modern starting point for building Laravel applications with a Livewire frontend.
+Each trainer registers with an email and password and gets a private workspace (multi-tenant, one database, every row scoped to its trainer). Inside it they manage:
 
-Livewire is a powerful way of building dynamic, reactive, frontend UIs using just PHP. It's a great fit for teams that primarily use Blade templates and are looking for a simpler alternative to JavaScript-driven SPA frameworks like React and Vue.
+- **Clients** on one of two kinds of plan:
+  - **Monthly membership** — a flat fee plus GST is posted to the client's ledger each month; every session is included.
+  - **Pay-as-you-go (Fitness Wallet)** — the client deposits money (like a Compass card) and each completed session deducts a per-person rate plus GST.
+- **Services** (e.g. "Personal Training (60 min)") and **Plans** that hold the rate grid: Single / Partner / Triple / Quad prices per person. Different clients can be on different plans, so different people pay different rates; a one-off price override is available per attendee.
+- **Sessions** — log who trained; the rate tier follows how many people showed up. One session can be assigned to several clients. Completed sessions can be reopened to fix attendance, which voids and re-posts the charges.
+- **Payments** by cash, cheque or e-Transfer (card methods are intentionally not offered yet). Adjustments and refunds are posted to the same append-only ledger.
+- **GST** — rates are entered before tax and GST (5% default) is added on top. Money received is treated as GST-inclusive. Reports show GST both on an accrual basis (what was charged) and a cash basis (what was received) so you and your accountant can pick the remittance basis.
+- **Reports** — monthly and annual (tax year) summaries with a CSV export.
 
-This Livewire starter kit utilizes Livewire 3, Laravel Volt, TypeScript, Tailwind, and the [Flux UI](https://fluxui.dev) component library.
+## Local setup
 
-## Official Documentation
+```bash
+composer install
+npm install && npm run build
+cp .env.example .env          # SQLite by default
+php artisan key:generate
+touch database/database.sqlite
+php artisan migrate --seed    # demo trainer: brooke@example.com / password
+php artisan serve             # http://localhost:8000
+```
 
-Documentation for all Laravel starter kits can be found on the [Laravel website](https://laravel.com/docs/starter-kits).
+`composer run dev` starts the server, queue listener, log tail and Vite together.
 
-## Contributing
+The seeder also creates `other@example.com` / `password` so you can confirm trainers never see each other's data.
 
-Thank you for considering contributing to our starter kit! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+## Tests
 
-## Code of Conduct
+```bash
+vendor/bin/pest
+vendor/bin/pint --test
+```
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+## Monthly fees
 
-## License
+Membership fees are posted automatically by the scheduler each morning (Pacific time) for every active monthly client whose billing day has arrived. Posting is idempotent per client and month, and there is a **Post monthly fee** button on the client page as a manual fallback.
 
-The Laravel + Livewire starter kit is open-sourced software licensed under the MIT license.
+```bash
+php artisan billing:post-monthly-fees            # run now
+php artisan billing:post-monthly-fees --date=2026-10-01
+```
+
+## Production (Laravel Forge, MySQL 8)
+
+1. Create a site with PHP 8.2+ and a MySQL 8 database.
+2. In `.env` set `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://brookeapp.com`, `APP_TIMEZONE=America/Vancouver`, and the `DB_CONNECTION=mysql` block (host, database, username, password).
+3. Configure a real mailer (`MAIL_MAILER=smtp` with your provider) so registration emails and password resets send. Email verification is required before the dashboard opens.
+4. Deploy script: `composer install --no-dev --optimize-autoloader && npm ci && npm run build && php artisan migrate --force && php artisan optimize`.
+5. Enable Forge's scheduler (it runs `php artisan schedule:run` every minute) so monthly fees post.
+6. Optional but recommended: a queue worker (`php artisan queue:work`) — Phase 2 emails will use it.
+
+## Roadmap
+
+- **Phase 1 (this release)** — auth, tenancy, clients, plans and services, Fitness Wallet ledger, session logging, payments, GST, monthly and annual reports.
+- **Phase 2** — scheduling calendar, booking emails with `.ics` invites ("contact Brooke to change"), optional session-completed emails showing the charge and remaining balance. The schema already stores scheduled sessions and the trainer's booking instructions.
+- **Phase 3** — client magic-link portal to view deposits, session history and balance. The `clients.portal_token` column is already in place.
