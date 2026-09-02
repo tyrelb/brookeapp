@@ -29,6 +29,21 @@ php artisan serve             # http://localhost:8000
 
 The seeder also creates `other@example.com` / `password` so you can confirm trainers never see each other's data.
 
+## Platform administration
+
+A separate admin area at `/admin` is for you, the platform owner, to support trainers and watch sign-ups. Admins see account status and activity counts only; trainers' clients, ledgers, payments and reports stay private.
+
+- Overview: trainers signed up, new this month, active in the last 30 days, verified vs. unverified, sessions completed, and a 12-month sign-up chart.
+- Trainers: search, filter (unverified, suspended, admins), and per-trainer support actions: send a password reset email, resend the verification email, activate the account by marking the email verified, suspend or reinstate, grant or revoke admin.
+
+Make yourself an admin after registering:
+
+```bash
+php artisan admin:grant you@example.com
+```
+
+The seeder creates `admin@example.com` / `password` for local use.
+
 ## Tests
 
 ```bash

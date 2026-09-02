@@ -1,5 +1,6 @@
 <?php
 
+use App\Livewire\Admin;
 use App\Livewire\Clients;
 use App\Livewire\Dashboard;
 use App\Livewire\Plans;
@@ -14,7 +15,7 @@ Route::get('/', function () {
     return auth()->check() ? redirect()->route('dashboard') : view('welcome');
 })->name('home');
 
-Route::middleware(['auth', 'verified'])->group(function () {
+Route::middleware(['auth', 'not-suspended', 'verified'])->group(function () {
     Route::get('dashboard', Dashboard::class)->name('dashboard');
 
     Route::get('clients', Clients\Index::class)->name('clients.index');
@@ -36,7 +37,13 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('reports/annual', Reports\Annual::class)->name('reports.annual');
 });
 
-Route::middleware(['auth'])->group(function () {
+Route::middleware(['auth', 'not-suspended', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
+    Route::get('/', Admin\Dashboard::class)->name('dashboard');
+    Route::get('trainers', Admin\Trainers\Index::class)->name('trainers.index');
+    Route::get('trainers/{user}', Admin\Trainers\Show::class)->name('trainers.show');
+});
+
+Route::middleware(['auth', 'not-suspended'])->group(function () {
     Route::redirect('settings', 'settings/profile');
 
     Volt::route('settings/profile', 'settings.profile')->name('settings.profile');

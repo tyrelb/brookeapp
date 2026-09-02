@@ -37,6 +37,9 @@ class User extends Authenticatable implements MustVerifyEmail
         'etransfer_email',
         'booking_instructions',
         'timezone',
+        'is_admin',
+        'suspended_at',
+        'last_login_at',
     ];
 
     /**
@@ -62,6 +65,9 @@ class User extends Authenticatable implements MustVerifyEmail
             'gst_registered' => 'boolean',
             'gst_rate' => 'decimal:2',
             'payment_methods' => 'array',
+            'is_admin' => 'boolean',
+            'suspended_at' => 'datetime',
+            'last_login_at' => 'datetime',
         ];
     }
 
@@ -137,5 +143,16 @@ class User extends Authenticatable implements MustVerifyEmail
     public function displayName(): string
     {
         return $this->business_name ?: $this->name;
+    }
+
+    /** Platform administrator: can see trainers and support them, never their billing data. */
+    public function isAdmin(): bool
+    {
+        return (bool) $this->is_admin;
+    }
+
+    public function isSuspended(): bool
+    {
+        return $this->suspended_at !== null;
     }
 }

@@ -23,6 +23,12 @@
                     <flux:navlist.item icon="sparkles" :href="route('services.index')" :current="request()->routeIs('services.*')" wire:navigate>Services</flux:navlist.item>
                 </flux:navlist.group>
 
+                @if (auth()->user()->isAdmin())
+                    <flux:navlist.group heading="Administration" class="grid">
+                        <flux:navlist.item icon="shield-check" :href="route('admin.dashboard')" :current="request()->routeIs('admin.*')" wire:navigate>Admin</flux:navlist.item>
+                    </flux:navlist.group>
+                @endif
+
                 <flux:navlist.group heading="Reports" class="grid">
                     <flux:navlist.item icon="chart-bar" :href="route('reports.monthly')" :current="request()->routeIs('reports.monthly')" wire:navigate>Monthly report</flux:navlist.item>
                     <flux:navlist.item icon="document-chart-bar" :href="route('reports.annual')" :current="request()->routeIs('reports.annual')" wire:navigate>Annual report</flux:navlist.item>

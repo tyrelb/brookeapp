@@ -145,6 +145,14 @@ class DatabaseSeeder extends Seeder
             }
         }
 
+        // Platform administrator (support + statistics; never sees trainers' billing).
+        User::factory()->create([
+            'name' => 'Tyrel',
+            'email' => 'admin@example.com',
+            'password' => 'password',
+            'is_admin' => true,
+        ]);
+
         // A second trainer proves tenancy: log in as them and Brooke's data is invisible.
         User::factory()->create([
             'name' => 'Other Trainer',
