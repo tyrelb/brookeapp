@@ -1,6 +1,6 @@
 # BrookeApp
 
-Billing and **Fitness Wallet** tracking for personal trainers. Built with Laravel 12, Livewire 4 and Flux.
+Billing and **Fitness Wallet** tracking for personal trainers. Built with Laravel 13, Livewire 4 and Flux. Requires PHP 8.5.
 
 Each trainer registers with an email and password and gets a private workspace (multi-tenant, one database, every row scoped to its trainer). Inside it they manage:
 
@@ -26,6 +26,8 @@ php artisan serve             # http://localhost:8000
 ```
 
 `composer run dev` starts the server, queue listener, log tail and Vite together.
+
+Outbound email (registration verification, password resets) goes to SMTP on `127.0.0.1:1025` by default, which is where [MailHog](https://github.com/mailhog/MailHog) and [Mailpit](https://mailpit.axllent.org) listen; open http://127.0.0.1:8025 to read it. Set `MAIL_MAILER=log` in `.env` to write mail to the log instead.
 
 The seeder also creates `other@example.com` / `password` so you can confirm trainers never see each other's data.
 
@@ -62,7 +64,7 @@ php artisan billing:post-monthly-fees --date=2026-10-01
 
 ## Production (Laravel Forge, MySQL 8)
 
-1. Create a site with PHP 8.2+ and a MySQL 8 database.
+1. Create a site with PHP 8.5 and a MySQL 8 database.
 2. In `.env` set `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://brookeapp.com`, `APP_TIMEZONE=America/Vancouver`, and the `DB_CONNECTION=mysql` block (host, database, username, password).
 3. Configure a real mailer (`MAIL_MAILER=smtp` with your provider) so registration emails and password resets send. Email verification is required before the dashboard opens.
 4. Deploy script: `composer install --no-dev --optimize-autoloader && npm ci && npm run build && php artisan migrate --force && php artisan optimize`.
