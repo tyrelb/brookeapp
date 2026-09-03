@@ -78,12 +78,15 @@ php artisan billing:post-monthly-fees --date=2026-10-01
 - **Reschedule / cancel**: from a scheduled session, *Reschedule* emails an updated invite (same calendar event, higher sequence) and *Cancel* or *Delete* emails a cancellation that removes it from the client's calendar. Only attendees who were sent an invite are notified.
 - **Receipts**: when completing a session (from Log session or a scheduled session), tick *Email attendees a receipt* to send each attendee what was deducted, their remaining Fitness Wallet balance (or amount owing on a monthly plan), and how to book next time. *Email receipts* on a completed session resends them.
 - **Defaults**: Settings → Business has two switches that pre-tick these options.
+- **Repeats**: *Book session* can repeat every 1, 2 or 4 weeks on chosen weekdays up to a required end date (at most 12 months and 100 sessions). Each date becomes a real session sharing the same attendees, and each client gets one invite email whose `.ics` holds every date as its own event. From any scheduled session in a repeat, *Reschedule* and *Cancel* can apply to "only this session" or "this and following"; following sessions shift by the same number of days and take the new time, length, service and gym, while earlier, completed and cancelled sessions are never changed. *Apply attendees to following* copies the attendee list forward.
 
 Emails are queued, so run a worker (`php artisan queue:work`) locally and on Forge. The `.env.example` uses `QUEUE_CONNECTION=database`; set it to `sync` if you would rather send inline while developing.
 
 ## Client wallet link (Phase 3)
 
 Every client has a private magic link (`/wallet/{token}`) that opens a read-only Fitness Wallet page with no login: balance, plan, upcoming bookings, every deposit and session, and how to reach the trainer to book or pay. The trainer's client page shows the link with **Copy link**, **Email link** and **Reset link** (which invalidates the old one). The link is also included in booking invites and receipts.
+
+The page offers a **list** view (upcoming sessions, activity and history, each paginated so long repeats don't overwhelm) and a **calendar** view (month grid with prev/next), switchable with the pills in the header.
 
 Tokens are 48 random characters, the route is rate-limited, the page is `noindex`, and the link stops working if the trainer's account is suspended.
 

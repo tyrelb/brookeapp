@@ -119,6 +119,39 @@
             </div>
         </section>
 
+        @if ($isBooking)
+            <section class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:checkbox wire:model.live="repeat" label="Repeat this booking" description="Books one session per date, all with the same clients. Every repeat needs an end date." />
+                @if ($repeat)
+                    <div class="mt-4 grid gap-4 sm:grid-cols-3">
+                        <flux:select wire:model.live="intervalWeeks" label="Repeats">
+                            @foreach ($intervals as $weeks => $label)
+                                <flux:select.option value="{{ $weeks }}">{{ $label }}</flux:select.option>
+                            @endforeach
+                        </flux:select>
+                        <div class="sm:col-span-2">
+                            <flux:checkbox.group wire:model.live="weekdays" label="On" variant="cards" class="grid grid-cols-7 gap-1">
+                                @foreach ($weekdayNames as $n => $name)
+                                    <flux:checkbox value="{{ $n }}" label="{{ $name }}" />
+                                @endforeach
+                            </flux:checkbox.group>
+                        </div>
+                        <flux:input wire:model.live="until" label="Until (last possible date)" type="date" />
+                        <div class="sm:col-span-2 self-end text-sm">
+                            @if ($repeatPreview['error'])
+                                <span class="text-red-600 dark:text-red-400">{{ $repeatPreview['error'] }}</span>
+                            @else
+                                <span class="font-medium">Creates {{ $repeatPreview['count'] }} {{ Str::plural('session', $repeatPreview['count']) }}</span>
+                                <span class="text-zinc-500">· {{ $repeatPreview['description'] }} · last on {{ $repeatPreview['last'] }}</span>
+                            @endif
+                        </div>
+                    </div>
+                    @error('until') <flux:error name="until">{{ $message }}</flux:error> @enderror
+                    @error('weekdays') <flux:error name="weekdays">{{ $message }}</flux:error> @enderror
+                @endif
+            </section>
+        @endif
+
         <section>
             @if ($isBooking)
                 <flux:checkbox wire:model="sendInvites" label="Email attendees a calendar invite" description="Includes an .ics they can accept, plus your booking instructions for changes. Clients without an email address are skipped." />
@@ -129,7 +162,7 @@
 
         <div class="flex flex-wrap items-center gap-3">
             @if ($isBooking)
-                <flux:button type="submit" variant="primary" icon="calendar">Book session</flux:button>
+                <flux:button type="submit" variant="primary" icon="calendar">{{ $repeat && $repeatPreview && ! $repeatPreview['error'] ? 'Book '.$repeatPreview['count'].' '.Str::plural('session', $repeatPreview['count']) : 'Book session' }}</flux:button>
                 <flux:button :href="route('sessions.calendar', ['date' => $date])" variant="ghost" wire:navigate>Cancel</flux:button>
             @else
                 <flux:button type="submit" variant="primary" icon="check">Complete &amp; charge</flux:button>

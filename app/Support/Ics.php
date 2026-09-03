@@ -4,10 +4,13 @@ namespace App\Support;
 
 use App\Models\Client;
 use App\Models\TrainingSession;
+use Illuminate\Support\Collection;
 
 /**
  * Minimal iCalendar (RFC 5545) writer for session invites. Times are emitted in UTC
  * so every calendar client shows them correctly without a VTIMEZONE block.
+ * A calendar may carry several VEVENTs (one per session of a repeat), each with its own UID,
+ * so later single-session updates and cancellations still target exactly one event.
  */
 class Ics
 {
@@ -16,6 +19,36 @@ class Ics
     public const METHOD_CANCEL = 'CANCEL';
 
     public static function forSession(TrainingSession $session, Client $client, string $method = self::METHOD_REQUEST): string
+    {
+        return self::forSessions(collect([$session]), $client, $method);
+    }
+
+    /**
+     * @param  Collection<int, TrainingSession>  $sessions
+     */
+    public static function forSessions(Collection $sessions, Client $client, string $method = self::METHOD_REQUEST): string
+    {
+        $lines = [
+            'BEGIN:VCALENDAR',
+            'VERSION:2.0',
+            'PRODID:-//BrookeApp//Training Sessions//EN',
+            'CALSCALE:GREGORIAN',
+            'METHOD:'.$method,
+        ];
+
+        foreach ($sessions->sortBy('starts_at') as $session) {
+            $lines = array_merge($lines, self::event($session, $client, $method));
+        }
+
+        $lines[] = 'END:VCALENDAR';
+
+        return implode("\r\n", array_map(self::fold(...), $lines))."\r\n";
+    }
+
+    /**
+     * @return list<string>
+     */
+    private static function event(TrainingSession $session, Client $client, string $method): array
     {
         $session->loadMissing(['service', 'trainer', 'attendees.client']);
         $trainer = $session->trainer;
@@ -32,12 +65,7 @@ class Ics
             'Email: '.$trainer->email,
         ])->filter(fn ($line) => $line !== null)->join("\n");
 
-        $lines = [
-            'BEGIN:VCALENDAR',
-            'VERSION:2.0',
-            'PRODID:-//BrookeApp//Training Sessions//EN',
-            'CALSCALE:GREGORIAN',
-            'METHOD:'.$method,
+        return [
             'BEGIN:VEVENT',
             'UID:'.$session->ensureIcsUid(),
             'SEQUENCE:'.(int) $session->ics_sequence,
@@ -51,10 +79,7 @@ class Ics
             'STATUS:'.($method === self::METHOD_CANCEL ? 'CANCELLED' : 'CONFIRMED'),
             'TRANSP:OPAQUE',
             'END:VEVENT',
-            'END:VCALENDAR',
         ];
-
-        return implode("\r\n", array_map(self::fold(...), $lines))."\r\n";
     }
 
     /** Escape text per RFC 5545 §3.3.11. */

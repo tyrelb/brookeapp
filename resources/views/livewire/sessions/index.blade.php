@@ -5,6 +5,12 @@
         </x-slot:actions>
     </x-page-header>
 
+    @if ($seriesModel)
+        <flux:callout icon="arrow-path" class="mb-4">
+            <flux:callout.text>Showing one repeat: {{ $seriesModel->describe() }}. <flux:link :href="route('sessions.index')" wire:navigate>Show all sessions</flux:link></flux:callout.text>
+        </flux:callout>
+    @endif
+
     <div class="mb-4 grid gap-3 sm:grid-cols-3">
         <flux:select wire:model.live="status">
             <flux:select.option value="">All statuses</flux:select.option>
@@ -36,7 +42,7 @@
                             <flux:link :href="route('sessions.show', $session)" wire:navigate>{{ $session->starts_at->format('D M j, Y') }}</flux:link>
                             <div class="text-xs font-normal text-zinc-500">{{ $session->starts_at->format('g:i a') }} · {{ $session->duration_minutes }} min</div>
                         </flux:table.cell>
-                        <flux:table.cell>{{ $session->service->name }}@if ($session->gym)<div class="text-xs text-zinc-500">{{ $session->gym->name }}</div>@endif</flux:table.cell>
+                        <flux:table.cell>{{ $session->service->name }}@if ($session->isInSeries()) <a href="{{ route('sessions.index', ['series' => $session->session_series_id]) }}" wire:navigate title="{{ $session->series?->describe() }}"><flux:icon.arrow-path class="inline size-3.5 text-zinc-400" /></a>@endif @if ($session->gym)<div class="text-xs text-zinc-500">{{ $session->gym->name }}</div>@endif</flux:table.cell>
                         <flux:table.cell class="whitespace-normal">
                             @foreach ($session->attendees as $attendee)
                                 <span class="{{ $attendee->attended ? '' : 'line-through text-zinc-400' }}">{{ $attendee->client->full_name }}</span>@if (! $loop->last), @endif

@@ -2,8 +2,11 @@
 
 namespace App\Livewire\Sessions;
 
+use App\Actions\ApplyAttendeesToFollowing;
+use App\Actions\CancelFollowing;
 use App\Actions\CompleteTrainingSession;
 use App\Actions\ReopenTrainingSession;
+use App\Actions\RescheduleFollowing;
 use App\Actions\SendSessionCancellations;
 use App\Actions\SendSessionInvites;
 use App\Actions\SendSessionReceipts;
@@ -43,6 +46,8 @@ class Show extends Component
     public string $newTime = '';
 
     public string $newDuration = '';
+
+    public string $rescheduleScope = 'one'; // one | following
 
     public function mount(TrainingSession $trainingSession): void
     {
@@ -206,6 +211,21 @@ class Show extends Component
             'newDuration' => ['required', 'integer', 'min:5', 'max:480'],
         ]);
 
+        if ($this->rescheduleScope === 'following' && $this->trainingSession->isInSeries()) {
+            $changed = app(RescheduleFollowing::class)->handle($this->trainingSession, [
+                'date' => $this->newDate,
+                'time' => $this->newTime,
+                'duration_minutes' => (int) $this->newDuration,
+                'service_id' => (int) $this->newServiceId,
+                'gym_id' => $this->newGymId !== '' ? (int) $this->newGymId : null,
+            ]);
+
+            Flux::modal('reschedule')->close();
+            Flux::toast("Rescheduled this and {$changed} following ".str('session')->plural($changed).'. Earlier sessions were left as they were; invited clients get one updated invite.', variant: 'success');
+
+            return;
+        }
+
         $this->trainingSession->update([
             'service_id' => (int) $this->newServiceId,
             'gym_id' => $this->newGymId !== '' ? (int) $this->newGymId : null,
@@ -278,6 +298,31 @@ class Show extends Component
         Flux::toast($message, variant: 'success');
     }
 
+    public function cancelFollowing(): void
+    {
+        $this->authorize('update', $this->trainingSession);
+
+        if (! $this->trainingSession->isScheduled() || ! $this->trainingSession->isInSeries()) {
+            return;
+        }
+
+        $count = app(CancelFollowing::class)->handle($this->trainingSession);
+        Flux::toast("Cancelled this and the following sessions ({$count} in total). Invited clients get one cancellation email.", variant: 'success');
+    }
+
+    public function applyAttendeesToFollowing(): void
+    {
+        $this->authorize('update', $this->trainingSession);
+
+        if (! $this->trainingSession->isScheduled() || ! $this->trainingSession->isInSeries()) {
+            return;
+        }
+
+        $this->saveAttendance();
+        $count = app(ApplyAttendeesToFollowing::class)->handle($this->trainingSession->fresh());
+        Flux::toast("Attendees copied to {$count} following ".str('session')->plural($count).'.', variant: 'success');
+    }
+
     public function uncancel(): void
     {
         $this->authorize('update', $this->trainingSession);
@@ -310,8 +355,9 @@ class Show extends Component
 
     public function render()
     {
-        $session = $this->trainingSession->fresh(['service', 'gym', 'attendees.client.plan.rates']);
+        $session = $this->trainingSession->fresh(['service', 'gym', 'series', 'attendees.client.plan.rates']);
         $this->trainingSession = $session;
+        $following = $session->isInSeries() && $session->isScheduled() ? $session->followingInSeries()->count() : 0;
 
         $selected = $session->attendees->pluck('client')->keyBy('id');
 
@@ -330,6 +376,7 @@ class Show extends Component
             'services' => Service::query()->where('active', true)->orderBy('name')->get(),
             'gyms' => Gym::query()->orderByDesc('active')->orderBy('name')->get(),
             'preview' => $session->isScheduled() ? $this->previewCharges($session->service, $selected) : null,
+            'following' => $following,
         ])->title($session->service->name.' — '.$session->starts_at->format('M j, Y'));
     }
 }

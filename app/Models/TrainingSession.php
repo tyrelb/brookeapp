@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
 class TrainingSession extends Model
@@ -24,6 +25,7 @@ class TrainingSession extends Model
         'service_id',
         'gym_id',
         'gym_billable',
+        'session_series_id',
         'starts_at',
         'duration_minutes',
         'status',
@@ -55,6 +57,26 @@ class TrainingSession extends Model
     public function gym(): BelongsTo
     {
         return $this->belongsTo(Gym::class);
+    }
+
+    public function series(): BelongsTo
+    {
+        return $this->belongsTo(SessionSeries::class, 'session_series_id');
+    }
+
+    public function isInSeries(): bool
+    {
+        return $this->session_series_id !== null;
+    }
+
+    /** Later scheduled sessions of the same series (this one excluded). */
+    public function followingInSeries(): Collection
+    {
+        if (! $this->series) {
+            return collect();
+        }
+
+        return $this->series->scheduledFrom($this)->reject(fn (TrainingSession $s) => $s->is($this))->values();
     }
 
     public function attendees(): HasMany

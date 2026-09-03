@@ -2,11 +2,17 @@
     <x-page-header :title="$session->service->name" :subtitle="$session->starts_at->format('l, F j, Y \a\t g:i a').' – '.$session->endsAt()->format('g:i a').' · '.$session->duration_minutes.' min'.($session->gym ? ' · '.$session->gym->name : '')">
         <x-slot:actions>
             <flux:badge :color="$session->status->color()">{{ $session->status->label() }}</flux:badge>
+            @if ($session->isInSeries())
+                <a href="{{ route('sessions.index', ['series' => $session->session_series_id]) }}" wire:navigate><flux:badge icon="arrow-path" color="purple">{{ $session->series->describe() }}{{ $following ? " · {$following} more" : '' }}</flux:badge></a>
+            @endif
             @if ($session->isScheduled())
                 <flux:button variant="primary" icon="check" wire:click="complete">Complete &amp; charge</flux:button>
                 <flux:modal.trigger name="reschedule"><flux:button icon="clock">Reschedule</flux:button></flux:modal.trigger>
                 <flux:button icon="envelope" wire:click="sendInvites" wire:confirm="Email a calendar invite to every attendee with an email address?">{{ $session->invitesWereSent() ? 'Resend invites' : 'Send invites' }}</flux:button>
-                <flux:button wire:click="cancel" wire:confirm="Cancel this session? No one will be charged.{{ $session->invitesWereSent() ? ' Attendees who received an invite will be emailed a cancellation.' : '' }}">Cancel session</flux:button>
+                <flux:button wire:click="cancel" wire:confirm="Cancel this session? No one will be charged.{{ $session->invitesWereSent() ? ' Attendees who received an invite will be emailed a cancellation.' : '' }}">{{ $session->isInSeries() ? 'Cancel this session' : 'Cancel session' }}</flux:button>
+                @if ($session->isInSeries() && $following > 0)
+                    <flux:button variant="danger" wire:click="cancelFollowing" wire:confirm="Cancel this session and the {{ $following }} following {{ Str::plural('session', $following) }}? Earlier sessions are untouched. Invited clients get one cancellation email.">Cancel this &amp; following</flux:button>
+                @endif
                 <flux:button variant="ghost" wire:click="delete" wire:confirm="Delete this session entirely?{{ $session->invitesWereSent() ? ' Attendees who received an invite will be emailed a cancellation.' : '' }}">Delete</flux:button>
             @elseif ($session->isCompleted())
                 <flux:button icon="envelope" wire:click="sendReceiptsNow" wire:confirm="Email a receipt to everyone who attended and has an email address?">{{ $session->attendees->whereNotNull('receipt_sent_at')->isNotEmpty() ? 'Resend receipts' : 'Email receipts' }}</flux:button>
@@ -83,6 +89,11 @@
                 <div class="mt-3">
                     <flux:checkbox wire:model="sendReceipts" label="Email attendees a receipt when completed" description="Shows the charge and their remaining balance." />
                 </div>
+                @if ($session->isInSeries() && $following > 0)
+                    <div class="mt-3">
+                        <flux:button size="sm" icon="arrow-path" wire:click="applyAttendeesToFollowing" wire:confirm="Copy this session's attendee list to the {{ $following }} following {{ Str::plural('session', $following) }}? Earlier sessions are untouched.">Apply attendees to following {{ Str::plural('session', $following) }}</flux:button>
+                    </div>
+                @endif
             </div>
             <div class="lg:col-span-2">
                 <flux:heading>Add clients</flux:heading>
@@ -128,6 +139,12 @@
                     <flux:input wire:model="newTime" label="Start time" type="time" />
                 </div>
                 <flux:input wire:model="newDuration" label="Duration (min)" type="number" min="5" max="480" />
+                @if ($session->isInSeries() && $following > 0)
+                    <flux:radio.group wire:model="rescheduleScope" label="Apply to">
+                        <flux:radio value="one" label="Only this session" />
+                        <flux:radio value="following" label="This and the {{ $following }} following {{ Str::plural('session', $following) }}" description="Following sessions move by the same number of days and take the new time, length, service and gym. Earlier sessions are untouched." />
+                    </flux:radio.group>
+                @endif
                 <div class="flex justify-end gap-2">
                     <flux:modal.close><flux:button variant="ghost">Cancel</flux:button></flux:modal.close>
                     <flux:button type="submit" variant="primary">Save new time</flux:button>

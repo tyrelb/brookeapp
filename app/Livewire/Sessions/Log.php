@@ -2,6 +2,7 @@
 
 namespace App\Livewire\Sessions;
 
+use App\Actions\BookSessionSeries;
 use App\Actions\CompleteTrainingSession;
 use App\Actions\SendSessionInvites;
 use App\Actions\SendSessionReceipts;
@@ -12,6 +13,8 @@ use App\Models\Client;
 use App\Models\Gym;
 use App\Models\Service;
 use App\Models\TrainingSession;
+use App\Support\Recurrence;
+use Carbon\Carbon;
 use Flux\Flux;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
@@ -51,6 +54,19 @@ class Log extends Component
 
     public bool $sendReceipts = false;
 
+    // Repeat (book mode only)
+    public bool $repeat = false;
+
+    public string $intervalWeeks = '1';
+
+    /** @var list<int> ISO weekdays */
+    public array $weekdays = [];
+
+    public string $until = '';
+
+    /** True once the trainer picked weekdays themselves, so changing the date stops resetting them. */
+    public bool $weekdaysChosen = false;
+
     public function mount(?string $mode = null): void
     {
         $this->authorize('create', TrainingSession::class);
@@ -64,6 +80,8 @@ class Log extends Component
             $requested = request()->query('date');
             $this->date = $requested && strtotime($requested) ? $requested : today()->addDay()->toDateString();
             $this->time = '09:00';
+            $this->until = Carbon::parse($this->date)->addWeeks(8)->toDateString();
+            $this->weekdays = [Carbon::parse($this->date)->dayOfWeekIso];
         } else {
             $this->date = today()->toDateString();
             $this->time = now()->subHour()->format('H:00');
@@ -85,6 +103,37 @@ class Log extends Component
     public function isBooking(): bool
     {
         return $this->mode === 'book';
+    }
+
+    public function updatedDate(): void
+    {
+        if ($this->isBooking() && ! $this->weekdaysChosen && strtotime($this->date)) {
+            $this->weekdays = [Carbon::parse($this->date)->dayOfWeekIso];
+        }
+    }
+
+    public function updatedWeekdays(): void
+    {
+        $this->weekdaysChosen = true;
+    }
+
+    /**
+     * @return array{count:int, last:?string, description:string, error:?string}
+     */
+    public function repeatPreview(): array
+    {
+        try {
+            $dates = Recurrence::occurrences($this->date ?: today(), $this->until ?: today(), array_map('intval', $this->weekdays), (int) $this->intervalWeeks);
+
+            return [
+                'count' => count($dates),
+                'last' => $dates !== [] ? end($dates)->format('D M j, Y') : null,
+                'description' => Recurrence::describe((int) $this->intervalWeeks, array_map('intval', $this->weekdays), $this->until ?: null),
+                'error' => $dates === [] ? 'No dates match that pattern before the end date.' : null,
+            ];
+        } catch (BillingException $e) {
+            return ['count' => 0, 'last' => null, 'description' => '', 'error' => $e->getMessage()];
+        }
     }
 
     public function updatedGymId(): void
@@ -135,7 +184,15 @@ class Log extends Component
             'attendees' => ['required', 'array', 'min:1'],
             'attendees.*.attended' => ['boolean'],
             'attendees.*.override' => ['nullable', 'numeric', 'min:0', 'max:100000'],
+            'repeat' => ['boolean'],
+            'until' => [Rule::requiredIf($this->isBooking() && $this->repeat), 'nullable', 'date', 'after_or_equal:date'],
+            'intervalWeeks' => [Rule::in(['1', '2', '4'])],
+            'weekdays' => [Rule::requiredIf($this->isBooking() && $this->repeat), 'array'],
+            'weekdays.*' => ['integer', 'min:1', 'max:7'],
         ], [
+            'until.required' => 'Repeats need an end date.',
+            'until.after_or_equal' => 'The end date must be on or after the start date.',
+            'weekdays.required' => 'Choose at least one day of the week.',
             'gym_id.required' => 'Pick the gym this session is at so it shows on the gym usage report.',
             'attendees.required' => 'Add at least one client.',
             'attendees.min' => 'Add at least one client.',
@@ -145,6 +202,12 @@ class Log extends Component
 
         if (count($clientIds) !== count($this->attendees)) {
             $this->addError('attendees', 'One of the selected clients could not be found.');
+
+            return;
+        }
+
+        if ($this->isBooking() && $this->repeat && ! $complete) {
+            $this->bookSeries();
 
             return;
         }
@@ -196,6 +259,44 @@ class Log extends Component
         $this->redirectRoute('sessions.show', $session, navigate: true);
     }
 
+    private function bookSeries(): void
+    {
+        $attendees = [];
+        foreach ($this->attendees as $clientId => $state) {
+            $attendees[$clientId] = ['price_override' => ($state['override'] ?? '') !== '' ? round((float) $state['override'], 2) : null];
+        }
+
+        try {
+            $series = app(BookSessionSeries::class)->handle([
+                'user_id' => auth()->id(),
+                'service_id' => (int) $this->service_id,
+                'gym_id' => $this->gym_id !== '' ? (int) $this->gym_id : null,
+                'starts_on' => $this->date,
+                'ends_on' => $this->until,
+                'time' => $this->time,
+                'duration_minutes' => (int) $this->duration_minutes,
+                'interval_weeks' => (int) $this->intervalWeeks,
+                'weekdays' => array_map('intval', $this->weekdays),
+                'notes' => $this->notes ?: null,
+            ], $attendees, $this->sendInvites);
+        } catch (BillingException $e) {
+            $this->addError('until', $e->getMessage());
+
+            return;
+        }
+
+        $count = $series->sessions()->count();
+        $message = "Booked {$count} ".str('session')->plural($count).', '.strtolower($series->describe()).'.';
+
+        if ($this->sendInvites) {
+            $withEmail = Client::query()->whereIn('id', array_keys($attendees))->whereNotNull('email')->count();
+            $message .= $withEmail ? " One invite with all dates emailed to {$withEmail} ".str('client')->plural($withEmail).'.' : ' No attendee has an email address, so no invites were sent.';
+        }
+
+        Flux::toast($message, variant: 'success');
+        $this->redirectRoute('sessions.calendar', ['date' => $this->date], navigate: true);
+    }
+
     private function services()
     {
         return Service::query()->where('active', true)->orderBy('name')->get();
@@ -219,6 +320,9 @@ class Log extends Component
             'candidates' => $candidates,
             'selected' => $selected,
             'preview' => $this->previewCharges($service, $selected),
+            'repeatPreview' => $this->isBooking() && $this->repeat ? $this->repeatPreview() : null,
+            'intervals' => Recurrence::INTERVALS,
+            'weekdayNames' => Recurrence::WEEKDAYS,
         ])->title($this->isBooking() ? 'Book session' : 'Log session');
     }
 }

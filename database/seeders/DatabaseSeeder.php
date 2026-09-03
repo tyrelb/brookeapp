@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Actions\BookSessionSeries;
 use App\Actions\CompleteTrainingSession;
 use App\Actions\PostMonthlyFee;
 use App\Actions\RecordPayment;
@@ -15,6 +16,7 @@ use App\Models\Plan;
 use App\Models\Service;
 use App\Models\TrainingSession;
 use App\Models\User;
+use Carbon\Carbon;
 use Illuminate\Database\Seeder;
 
 /**
@@ -160,6 +162,14 @@ class DatabaseSeeder extends Seeder
         ]);
         TrainingSession::query()->forTrainer($brooke)->update(['gym_id' => $gym->id]);
         Client::query()->forTrainer($brooke)->update(['gym_id' => $gym->id]);
+
+        // A standing Tue/Thu booking for Ava for the next six weeks (a repeat with an end date).
+        $firstTuesday = now()->next(Carbon::TUESDAY);
+        app(BookSessionSeries::class)->handle([
+            'user_id' => $brooke->id, 'service_id' => $pt->id, 'gym_id' => $gym->id,
+            'starts_on' => $firstTuesday->toDateString(), 'ends_on' => $firstTuesday->copy()->addWeeks(6)->toDateString(),
+            'time' => '07:00', 'duration_minutes' => 60, 'interval_weeks' => 1, 'weekdays' => [2, 4], 'notes' => null,
+        ], [$clients['Ava']->id => []]);
 
         // Platform administrator (support + statistics; never sees trainers' billing).
         User::factory()->create([

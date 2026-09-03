@@ -43,7 +43,7 @@
                                            default => 'bg-[var(--color-accent)]/10 text-[var(--color-accent-content)] dark:text-zinc-100',
                                        } }}"
                                        title="{{ $session->service->name }} · {{ $session->attendees->pluck('client.full_name')->join(', ') }}">
-                                        <span class="font-medium">{{ $session->starts_at->format('g:i') }}</span>
+                                        <span class="font-medium">{{ $session->starts_at->format('g:i') }}</span>@if ($session->isInSeries())<span title="Repeats">↻</span>@endif
                                         {{ $session->attendees->pluck('client.first_name')->join(', ') ?: $session->service->name }}
                                     </a>
                                 @endforeach
