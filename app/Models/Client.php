@@ -23,6 +23,7 @@ class Client extends Model
     protected $fillable = [
         'user_id',
         'plan_id',
+        'gym_id',
         'first_name',
         'last_name',
         'email',
@@ -44,6 +45,12 @@ class Client extends Model
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);
+    }
+
+    /** The gym this client usually trains at; pre-selected when they're added to a session. */
+    public function gym(): BelongsTo
+    {
+        return $this->belongsTo(Gym::class);
     }
 
     public function transactions(): HasMany

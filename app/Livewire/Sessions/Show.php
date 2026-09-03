@@ -200,7 +200,7 @@ class Show extends Component
 
         $this->validate([
             'newServiceId' => ['required', Rule::exists('services', 'id')->where('user_id', auth()->id())],
-            'newGymId' => ['nullable', Rule::exists('gyms', 'id')->where('user_id', auth()->id())],
+            'newGymId' => [Rule::requiredIf(Gym::query()->active()->exists()), 'nullable', Rule::exists('gyms', 'id')->where('user_id', auth()->id())],
             'newDate' => ['required', 'date'],
             'newTime' => ['required', 'date_format:H:i'],
             'newDuration' => ['required', 'integer', 'min:5', 'max:480'],
@@ -228,6 +228,13 @@ class Show extends Component
     public function setGym(string $gymId): void
     {
         $this->authorize('update', $this->trainingSession);
+        if ($gymId === '' && Gym::query()->active()->exists()) {
+            Flux::toast('Pick a gym so this session shows on the gym usage report.', variant: 'warning');
+            $this->newGymId = (string) ($this->trainingSession->gym_id ?? '');
+
+            return;
+        }
+
         $this->validate(['newGymId' => ['nullable', Rule::exists('gyms', 'id')->where('user_id', auth()->id())]]);
         $this->trainingSession->update(['gym_id' => $gymId !== '' ? (int) $gymId : null]);
         Flux::toast('Gym updated.', variant: 'success');

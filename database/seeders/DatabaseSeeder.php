@@ -159,6 +159,7 @@ class DatabaseSeeder extends Seeder
             'is_default' => true,
         ]);
         TrainingSession::query()->forTrainer($brooke)->update(['gym_id' => $gym->id]);
+        Client::query()->forTrainer($brooke)->update(['gym_id' => $gym->id]);
 
         // Platform administrator (support + statistics; never sees trainers' billing).
         User::factory()->create([

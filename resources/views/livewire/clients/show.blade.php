@@ -37,6 +37,9 @@
             <div class="mt-1">{{ $client->email ?: '—' }}</div>
             <div>{{ $client->phone ?: '—' }}</div>
             <div class="mt-2 text-xs text-zinc-500">Client since {{ $client->started_at?->format('M j, Y') ?? '—' }}</div>
+            @if ($client->gym)
+                <div class="mt-1 text-xs text-zinc-500">Usually trains at {{ $client->gym->name }}</div>
+            @endif
         </div>
         <div class="rounded-xl border border-zinc-200 bg-white p-5 text-sm dark:border-zinc-700 dark:bg-zinc-900">
             <div class="text-zinc-500 dark:text-zinc-400">Notes</div>

@@ -4,6 +4,7 @@ namespace App\Livewire\Clients;
 
 use App\Enums\ClientStatus;
 use App\Models\Client;
+use App\Models\Gym;
 use App\Models\Plan;
 use Flux\Flux;
 use Illuminate\Validation\Rule;
@@ -27,6 +28,8 @@ class Form extends Component
 
     public string $plan_id = '';
 
+    public string $gym_id = '';
+
     public string $status = 'active';
 
     #[Validate('nullable|date')]
@@ -45,6 +48,7 @@ class Form extends Component
             $this->email = (string) $client->email;
             $this->phone = (string) $client->phone;
             $this->plan_id = (string) $client->plan_id;
+            $this->gym_id = (string) ($client->gym_id ?? '');
             $this->status = $client->status->value;
             $this->started_at = $client->started_at?->toDateString() ?? '';
             $this->notes = (string) $client->notes;
@@ -52,6 +56,7 @@ class Form extends Component
             $this->authorize('create', Client::class);
             $this->client = null;
             $this->started_at = today()->toDateString();
+            $this->gym_id = (string) (auth()->user()->defaultGym()?->id ?? '');
         }
     }
 
@@ -68,6 +73,7 @@ class Form extends Component
             ],
             'phone' => ['nullable', 'string', 'max:30'],
             'plan_id' => ['nullable', Rule::exists('plans', 'id')->where('user_id', auth()->id())],
+            'gym_id' => ['nullable', Rule::exists('gyms', 'id')->where('user_id', auth()->id())],
             'status' => ['required', Rule::enum(ClientStatus::class)],
             'started_at' => ['nullable', 'date'],
             'notes' => ['nullable', 'string', 'max:5000'],
@@ -75,6 +81,7 @@ class Form extends Component
 
         $data['email'] = $data['email'] ?: null;
         $data['plan_id'] = $data['plan_id'] ?: null;
+        $data['gym_id'] = $data['gym_id'] ?: null;
         $data['started_at'] = $data['started_at'] ?: null;
         $data['last_name'] = $data['last_name'] ?: null;
 
@@ -93,6 +100,7 @@ class Form extends Component
     {
         return view('livewire.clients.form', [
             'plans' => Plan::query()->where('active', true)->orderBy('name')->get(),
+            'gyms' => Gym::query()->active()->orderBy('name')->get(),
         ])->title($this->client ? 'Edit client' : 'Add client');
     }
 }

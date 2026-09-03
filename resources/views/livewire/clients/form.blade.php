@@ -16,6 +16,15 @@
             @endforeach
         </flux:select>
 
+        @if ($gyms->count() > 1)
+            <flux:select wire:model="gym_id" label="Default gym" description="Pre-selected when you add this client to a session.">
+                <flux:select.option value="">No default</flux:select.option>
+                @foreach ($gyms as $gym)
+                    <flux:select.option value="{{ $gym->id }}">{{ $gym->name }}</flux:select.option>
+                @endforeach
+            </flux:select>
+        @endif
+
         <div class="grid gap-4 sm:grid-cols-2">
             <flux:select wire:model="status" label="Status">
                 <flux:select.option value="active">Active</flux:select.option>

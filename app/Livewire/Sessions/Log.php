@@ -31,6 +31,9 @@ class Log extends Component
 
     public string $gym_id = '';
 
+    /** True once the trainer picked a gym themselves, so adding clients stops changing it. */
+    public bool $gymChosen = false;
+
     public string $date = '';
 
     public string $time = '';
@@ -84,6 +87,11 @@ class Log extends Component
         return $this->mode === 'book';
     }
 
+    public function updatedGymId(): void
+    {
+        $this->gymChosen = true;
+    }
+
     public function updatedServiceId(): void
     {
         if ($service = $this->services()->firstWhere('id', (int) $this->service_id)) {
@@ -101,6 +109,11 @@ class Log extends Component
 
         $this->attendees[$clientId] = ['attended' => true, 'override' => ''];
         $this->clientSearch = '';
+
+        // The first client's usual gym wins unless the trainer already chose one.
+        if (! $this->gymChosen && $client->gym_id && Gym::query()->active()->whereKey($client->gym_id)->exists()) {
+            $this->gym_id = (string) $client->gym_id;
+        }
     }
 
     public function removeClient(int $clientId): void
@@ -114,7 +127,7 @@ class Log extends Component
 
         $this->validate([
             'service_id' => ['required', Rule::exists('services', 'id')->where('user_id', auth()->id())],
-            'gym_id' => ['nullable', Rule::exists('gyms', 'id')->where('user_id', auth()->id())],
+            'gym_id' => [Rule::requiredIf(Gym::query()->active()->exists()), 'nullable', Rule::exists('gyms', 'id')->where('user_id', auth()->id())],
             'date' => ['required', 'date'],
             'time' => ['required', 'date_format:H:i'],
             'duration_minutes' => ['required', 'integer', 'min:5', 'max:480'],
@@ -123,6 +136,7 @@ class Log extends Component
             'attendees.*.attended' => ['boolean'],
             'attendees.*.override' => ['nullable', 'numeric', 'min:0', 'max:100000'],
         ], [
+            'gym_id.required' => 'Pick the gym this session is at so it shows on the gym usage report.',
             'attendees.required' => 'Add at least one client.',
             'attendees.min' => 'Add at least one client.',
         ]);

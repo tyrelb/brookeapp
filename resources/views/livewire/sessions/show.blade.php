@@ -117,7 +117,7 @@
                 </flux:select>
                 @if ($gyms->isNotEmpty())
                     <flux:select wire:model="newGymId" label="Gym">
-                        <flux:select.option value="">No gym</flux:select.option>
+                        <flux:select.option value="">Choose a gym…</flux:select.option>
                         @foreach ($gyms as $gym)
                             <flux:select.option value="{{ $gym->id }}">{{ $gym->name }}</flux:select.option>
                         @endforeach
@@ -179,7 +179,9 @@
             <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
                 <div class="w-full sm:w-72">
                     <flux:select wire:model.live="newGymId" wire:change="setGym($event.target.value)" label="Gym" description="Used for the gym usage report.">
-                        <flux:select.option value="">No gym</flux:select.option>
+                        @if (! $session->gym_id)
+                            <flux:select.option value="">Choose a gym…</flux:select.option>
+                        @endif
                         @foreach ($gyms as $gym)
                             <flux:select.option value="{{ $gym->id }}">{{ $gym->name }}{{ $gym->active ? '' : ' (inactive)' }}</flux:select.option>
                         @endforeach
