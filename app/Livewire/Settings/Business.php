@@ -28,6 +28,10 @@ class Business extends Component
 
     public string $booking_instructions = '';
 
+    public bool $notify_on_booking = true;
+
+    public bool $notify_on_completion = false;
+
     public function mount(): void
     {
         $user = auth()->user();
@@ -40,6 +44,8 @@ class Business extends Component
         $this->payment_methods = collect($user->enabledPaymentMethods())->map->value->all();
         $this->etransfer_email = (string) $user->etransfer_email;
         $this->booking_instructions = (string) $user->booking_instructions;
+        $this->notify_on_booking = (bool) $user->notify_on_booking;
+        $this->notify_on_completion = (bool) $user->notify_on_completion;
     }
 
     public function save(): void
@@ -54,6 +60,8 @@ class Business extends Component
             'payment_methods.*' => [Rule::enum(PaymentMethod::class)],
             'etransfer_email' => ['nullable', 'email', 'max:255'],
             'booking_instructions' => ['nullable', 'string', 'max:2000'],
+            'notify_on_booking' => ['boolean'],
+            'notify_on_completion' => ['boolean'],
         ], [
             'payment_methods.min' => 'Choose at least one way to get paid.',
         ]);

@@ -15,7 +15,8 @@
                 <flux:navlist.group heading="Training" class="grid">
                     <flux:navlist.item icon="home" :href="route('dashboard')" :current="request()->routeIs('dashboard')" wire:navigate>Dashboard</flux:navlist.item>
                     <flux:navlist.item icon="users" :href="route('clients.index')" :current="request()->routeIs('clients.*')" wire:navigate>Clients</flux:navlist.item>
-                    <flux:navlist.item icon="calendar-days" :href="route('sessions.index')" :current="request()->routeIs('sessions.*')" wire:navigate>Sessions</flux:navlist.item>
+                    <flux:navlist.item icon="calendar-days" :href="route('sessions.calendar')" :current="request()->routeIs('sessions.calendar') || request()->routeIs('sessions.book')" wire:navigate>Calendar</flux:navlist.item>
+                    <flux:navlist.item icon="clipboard-document-check" :href="route('sessions.index')" :current="request()->routeIs('sessions.*') && ! request()->routeIs('sessions.calendar') && ! request()->routeIs('sessions.book')" wire:navigate>Sessions</flux:navlist.item>
                 </flux:navlist.group>
 
                 <flux:navlist.group heading="Pricing" class="grid">

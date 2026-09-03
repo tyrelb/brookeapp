@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\SessionStatus;
 use App\Models\Concerns\BelongsToTrainer;
+use Carbon\Carbon;
 use Database\Factories\TrainingSessionFactory;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class TrainingSession extends Model
 {
@@ -25,6 +27,9 @@ class TrainingSession extends Model
         'status',
         'completed_at',
         'notes',
+        'ics_uid',
+        'ics_sequence',
+        'invites_sent_at',
     ];
 
     protected function casts(): array
@@ -34,6 +39,8 @@ class TrainingSession extends Model
             'completed_at' => 'datetime',
             'status' => SessionStatus::class,
             'duration_minutes' => 'integer',
+            'ics_sequence' => 'integer',
+            'invites_sent_at' => 'datetime',
         ];
     }
 
@@ -75,6 +82,33 @@ class TrainingSession extends Model
     public function isScheduled(): bool
     {
         return $this->status === SessionStatus::Scheduled;
+    }
+
+    public function endsAt(): Carbon
+    {
+        return $this->starts_at->copy()->addMinutes($this->duration_minutes);
+    }
+
+    public function isCancelled(): bool
+    {
+        return $this->status === SessionStatus::Cancelled;
+    }
+
+    public function invitesWereSent(): bool
+    {
+        return $this->invites_sent_at !== null;
+    }
+
+    /**
+     * Stable identifier for calendar invites so updates and cancellations replace the original event.
+     */
+    public function ensureIcsUid(): string
+    {
+        if (! $this->ics_uid) {
+            $this->forceFill(['ics_uid' => (string) Str::uuid().'@brookeapp'])->save();
+        }
+
+        return $this->ics_uid;
     }
 
     public function scopeCompleted(Builder $query): Builder

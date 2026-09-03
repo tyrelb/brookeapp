@@ -21,6 +21,8 @@ class SessionAttendee extends Model
         'gst_amount',
         'total',
         'wallet_transaction_id',
+        'invite_sent_at',
+        'receipt_sent_at',
     ];
 
     protected function casts(): array
@@ -31,6 +33,8 @@ class SessionAttendee extends Model
             'subtotal' => 'decimal:2',
             'gst_amount' => 'decimal:2',
             'total' => 'decimal:2',
+            'invite_sent_at' => 'datetime',
+            'receipt_sent_at' => 'datetime',
         ];
     }
 

@@ -3,6 +3,8 @@
 namespace App\Livewire\Sessions;
 
 use App\Actions\CompleteTrainingSession;
+use App\Actions\SendSessionInvites;
+use App\Actions\SendSessionReceipts;
 use App\Enums\SessionStatus;
 use App\Exceptions\BillingException;
 use App\Livewire\Sessions\Concerns\PreviewsCharges;
@@ -12,13 +14,17 @@ use App\Models\TrainingSession;
 use Flux\Flux;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
-use Livewire\Attributes\Title;
 use Livewire\Component;
 
-#[Title('Log session')]
+/**
+ * One form, two jobs: "log" records a session that already happened and charges it;
+ * "book" schedules a future session and (optionally) emails calendar invites.
+ */
 class Log extends Component
 {
     use PreviewsCharges;
+
+    public string $mode = 'log'; // log | book
 
     public string $service_id = '';
 
@@ -35,12 +41,27 @@ class Log extends Component
     /** @var array<int, array{attended: bool, override: string}> keyed by client id */
     public array $attendees = [];
 
-    public function mount(): void
+    public bool $sendInvites = true;
+
+    public bool $sendReceipts = false;
+
+    public function mount(?string $mode = null): void
     {
         $this->authorize('create', TrainingSession::class);
 
-        $this->date = today()->toDateString();
-        $this->time = now()->subHour()->format('H:00');
+        $this->mode = $mode ?? (request()->routeIs('sessions.book') ? 'book' : 'log');
+        $trainer = auth()->user();
+        $this->sendInvites = (bool) $trainer->notify_on_booking;
+        $this->sendReceipts = (bool) $trainer->notify_on_completion;
+
+        if ($this->isBooking()) {
+            $requested = request()->query('date');
+            $this->date = $requested && strtotime($requested) ? $requested : today()->addDay()->toDateString();
+            $this->time = '09:00';
+        } else {
+            $this->date = today()->toDateString();
+            $this->time = now()->subHour()->format('H:00');
+        }
 
         $first = $this->services()->first();
         if ($first) {
@@ -51,6 +72,11 @@ class Log extends Component
         if ($clientId = (int) request()->query('client')) {
             $this->addClient($clientId);
         }
+    }
+
+    public function isBooking(): bool
+    {
+        return $this->mode === 'book';
     }
 
     public function updatedServiceId(): void
@@ -133,7 +159,19 @@ class Log extends Component
             return;
         }
 
-        Flux::toast($complete ? 'Session logged and attendees charged.' : 'Session saved as scheduled.', variant: 'success');
+        $message = $complete ? 'Session logged and attendees charged.' : 'Session booked.';
+
+        if ($complete && $this->sendReceipts) {
+            $sent = app(SendSessionReceipts::class)->handle($session);
+            $message .= $sent ? " Receipt emailed to {$sent} ".str('client')->plural($sent).'.' : ' No attendee has an email address, so no receipts were sent.';
+        }
+
+        if (! $complete && $this->sendInvites) {
+            $sent = app(SendSessionInvites::class)->handle($session);
+            $message .= $sent ? " Calendar invite emailed to {$sent} ".str('client')->plural($sent).'.' : ' No attendee has an email address, so no invites were sent.';
+        }
+
+        Flux::toast($message, variant: 'success');
         $this->redirectRoute('sessions.show', $session, navigate: true);
     }
 
@@ -159,6 +197,6 @@ class Log extends Component
             'candidates' => $candidates,
             'selected' => $selected,
             'preview' => $this->previewCharges($service, $selected),
-        ]);
+        ])->title($this->isBooking() ? 'Book session' : 'Log session');
     }
 }

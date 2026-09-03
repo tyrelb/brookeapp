@@ -71,8 +71,18 @@ php artisan billing:post-monthly-fees --date=2026-10-01
 5. Enable Forge's scheduler (it runs `php artisan schedule:run` every minute) so monthly fees post.
 6. Optional but recommended: a queue worker (`php artisan queue:work`) — Phase 2 emails will use it.
 
+## Scheduling and client emails (Phase 2)
+
+- **Calendar** (`/sessions/calendar`): month and week views of every session, colour-coded by status. Click a day's **+** to book, click a session to open it.
+- **Book session** (`/sessions/book`): schedule a future session for one or more clients. With *Email attendees a calendar invite* ticked, each attendee with an email address receives a message with an `.ics` invite they can accept. The email says to contact the trainer directly for changes and includes the trainer's booking instructions from Settings → Business.
+- **Reschedule / cancel**: from a scheduled session, *Reschedule* emails an updated invite (same calendar event, higher sequence) and *Cancel* or *Delete* emails a cancellation that removes it from the client's calendar. Only attendees who were sent an invite are notified.
+- **Receipts**: when completing a session (from Log session or a scheduled session), tick *Email attendees a receipt* to send each attendee what was deducted, their remaining Fitness Wallet balance (or amount owing on a monthly plan), and how to book next time. *Email receipts* on a completed session resends them.
+- **Defaults**: Settings → Business has two switches that pre-tick these options.
+
+Emails are queued, so run a worker (`php artisan queue:work`) locally and on Forge. The `.env.example` uses `QUEUE_CONNECTION=database`; set it to `sync` if you would rather send inline while developing.
+
 ## Roadmap
 
-- **Phase 1 (this release)** — auth, tenancy, clients, plans and services, Fitness Wallet ledger, session logging, payments, GST, monthly and annual reports.
-- **Phase 2** — scheduling calendar, booking emails with `.ics` invites ("contact Brooke to change"), optional session-completed emails showing the charge and remaining balance. The schema already stores scheduled sessions and the trainer's booking instructions.
+- **Phase 1** — auth, tenancy, clients, plans and services, Fitness Wallet ledger, session logging, payments, GST, monthly and annual reports, platform admin area.
+- **Phase 2** — scheduling calendar, booking emails with `.ics` invites, reschedule and cancellation updates, session receipts with remaining balance.
 - **Phase 3** — client magic-link portal to view deposits, session history and balance. The `clients.portal_token` column is already in place.

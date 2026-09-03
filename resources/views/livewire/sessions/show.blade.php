@@ -1,12 +1,15 @@
 <div class="max-w-4xl space-y-6">
-    <x-page-header :title="$session->service->name" :subtitle="$session->starts_at->format('l, F j, Y \a\t g:i a').' · '.$session->duration_minutes.' min'">
+    <x-page-header :title="$session->service->name" :subtitle="$session->starts_at->format('l, F j, Y \a\t g:i a').' – '.$session->endsAt()->format('g:i a').' · '.$session->duration_minutes.' min'">
         <x-slot:actions>
             <flux:badge :color="$session->status->color()">{{ $session->status->label() }}</flux:badge>
             @if ($session->isScheduled())
                 <flux:button variant="primary" icon="check" wire:click="complete">Complete &amp; charge</flux:button>
-                <flux:button wire:click="cancel" wire:confirm="Cancel this session? No one will be charged.">Cancel session</flux:button>
-                <flux:button variant="ghost" wire:click="delete" wire:confirm="Delete this session entirely?">Delete</flux:button>
+                <flux:modal.trigger name="reschedule"><flux:button icon="clock">Reschedule</flux:button></flux:modal.trigger>
+                <flux:button icon="envelope" wire:click="sendInvites" wire:confirm="Email a calendar invite to every attendee with an email address?">{{ $session->invitesWereSent() ? 'Resend invites' : 'Send invites' }}</flux:button>
+                <flux:button wire:click="cancel" wire:confirm="Cancel this session? No one will be charged.{{ $session->invitesWereSent() ? ' Attendees who received an invite will be emailed a cancellation.' : '' }}">Cancel session</flux:button>
+                <flux:button variant="ghost" wire:click="delete" wire:confirm="Delete this session entirely?{{ $session->invitesWereSent() ? ' Attendees who received an invite will be emailed a cancellation.' : '' }}">Delete</flux:button>
             @elseif ($session->isCompleted())
+                <flux:button icon="envelope" wire:click="sendReceiptsNow" wire:confirm="Email a receipt to everyone who attended and has an email address?">{{ $session->attendees->whereNotNull('receipt_sent_at')->isNotEmpty() ? 'Resend receipts' : 'Email receipts' }}</flux:button>
                 <flux:button icon="arrow-uturn-left" wire:click="reopen" wire:confirm="Reopen this session? All charges will be voided so you can correct attendance and complete it again.">Reopen</flux:button>
             @else
                 <flux:button wire:click="uncancel">Restore to scheduled</flux:button>
@@ -23,7 +26,12 @@
 
     @if ($session->isScheduled())
         <flux:callout icon="information-circle">
-            <flux:callout.text>This session hasn't been charged yet. Tick who attended, adjust any price overrides, then <strong>Complete &amp; charge</strong>. The rate tier follows the number of people who attended.</flux:callout.text>
+            <flux:callout.text>
+                This session hasn't been charged yet. Tick who attended, adjust any price overrides, then <strong>Complete &amp; charge</strong>. The rate tier follows the number of people who attended.
+                @if ($session->invitesWereSent())
+                    Calendar invites were sent {{ $session->invites_sent_at->diffForHumans() }}; rescheduling or cancelling will email an update automatically.
+                @endif
+            </flux:callout.text>
         </flux:callout>
 
         <section class="grid gap-6 lg:grid-cols-5">
@@ -45,10 +53,11 @@
                         </thead>
                         <tbody>
                             @forelse ($preview['rows'] as $clientId => $row)
+                                @php($attendee = $session->attendees->firstWhere('client_id', $clientId))
                                 <tr class="border-t border-zinc-100 dark:border-zinc-800" wire:key="att-{{ $clientId }}">
                                     <td class="px-3 py-2">
                                         <flux:link :href="route('clients.show', $row['client'])" wire:navigate>{{ $row['client']->full_name }}</flux:link>
-                                        <div class="text-xs text-zinc-500">{{ $row['client']->plan?->name ?? 'No plan' }}</div>
+                                        <div class="text-xs text-zinc-500">{{ $row['client']->plan?->name ?? 'No plan' }}@if ($attendee?->invite_sent_at) · invited {{ $attendee->invite_sent_at->format('M j') }}@elseif (! $row['client']->email) · no email @endif</div>
                                     </td>
                                     <td class="px-3 py-2"><flux:checkbox wire:model.live="attendees.{{ $clientId }}.attended" /></td>
                                     <td class="px-3 py-2"><flux:input wire:model.live.debounce.400ms="attendees.{{ $clientId }}.override" type="number" step="0.01" min="0" placeholder="Plan rate" class="w-28" /></td>
@@ -71,6 +80,9 @@
                     <flux:input wire:model="notes" placeholder="Notes" class="flex-1" />
                     <flux:button wire:click="saveAttendance">Save</flux:button>
                 </div>
+                <div class="mt-3">
+                    <flux:checkbox wire:model="sendReceipts" label="Email attendees a receipt when completed" description="Shows the charge and their remaining balance." />
+                </div>
             </div>
             <div class="lg:col-span-2">
                 <flux:heading>Add clients</flux:heading>
@@ -86,8 +98,34 @@
                         <div class="px-3 py-4 text-sm text-zinc-500">No more active clients to add.</div>
                     @endforelse
                 </div>
+                @if ($session->invitesWereSent())
+                    <flux:text class="mt-2 text-xs">Clients added after invites went out won't have one yet. Use <strong>Resend invites</strong> to include them.</flux:text>
+                @endif
             </div>
         </section>
+
+        <flux:modal name="reschedule" class="md:w-[28rem]">
+            <form wire:submit="reschedule" class="space-y-5">
+                <div>
+                    <flux:heading size="lg">Reschedule session</flux:heading>
+                    <flux:subheading>{{ $session->invitesWereSent() ? 'Attendees who received an invite will be emailed the updated time automatically.' : 'No invites have been sent for this session yet.' }}</flux:subheading>
+                </div>
+                <flux:select wire:model="newServiceId" label="Service">
+                    @foreach ($services as $service)
+                        <flux:select.option value="{{ $service->id }}">{{ $service->name }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+                <div class="grid gap-4 sm:grid-cols-2">
+                    <flux:input wire:model="newDate" label="Date" type="date" />
+                    <flux:input wire:model="newTime" label="Start time" type="time" />
+                </div>
+                <flux:input wire:model="newDuration" label="Duration (min)" type="number" min="5" max="480" />
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close><flux:button variant="ghost">Cancel</flux:button></flux:modal.close>
+                    <flux:button type="submit" variant="primary">Save new time</flux:button>
+                </div>
+            </form>
+        </flux:modal>
     @else
         <section>
             <flux:heading class="mb-2">Attendees</flux:heading>
@@ -99,6 +137,7 @@
                     <flux:table.column align="end">Before GST</flux:table.column>
                     <flux:table.column align="end">GST</flux:table.column>
                     <flux:table.column align="end">Charged</flux:table.column>
+                    <flux:table.column>Receipt</flux:table.column>
                 </flux:table.columns>
                 <flux:table.rows>
                     @foreach ($session->attendees as $attendee)
@@ -113,6 +152,7 @@
                                     {{ (float) $attendee->total > 0 ? money($attendee->total) : 'Included' }}
                                 @endif
                             </flux:table.cell>
+                            <flux:table.cell class="text-xs">{{ $attendee->receipt_sent_at ? 'Sent '.$attendee->receipt_sent_at->format('M j') : ($attendee->client->email ? '' : 'No email') }}</flux:table.cell>
                         </flux:table.row>
                     @endforeach
                 </flux:table.rows>

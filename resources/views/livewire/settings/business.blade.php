@@ -27,7 +27,12 @@
 
             <flux:separator />
 
-            <flux:textarea wire:model="booking_instructions" label="Booking instructions" rows="4" placeholder="To book or change a session, text me at… " description="Included in client emails (Phase 2) so they know how to reach you." />
+            <flux:textarea wire:model="booking_instructions" label="Booking instructions" rows="4" placeholder="To book or change a session, text me at… " description="Included in every client email so they know how to reach you to book or change a session." />
+
+            <flux:separator />
+
+            <flux:checkbox wire:model="notify_on_booking" label="Email a calendar invite when I book a session" description="Default for the Book session form. Clients get an .ics they can accept; changes and cancellations send updates." />
+            <flux:checkbox wire:model="notify_on_completion" label="Email a receipt when I complete a session" description="Default for the Log session form. Shows what was deducted and the remaining Fitness Wallet balance." />
 
             <div class="flex items-center gap-4">
                 <flux:button variant="primary" type="submit">Save</flux:button>

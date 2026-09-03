@@ -34,6 +34,8 @@ class UserFactory extends Factory
             'gst_rate' => 5.00,
             'payment_methods' => null,
             'timezone' => 'America/Vancouver',
+            'notify_on_booking' => true,
+            'notify_on_completion' => false,
         ];
     }
 

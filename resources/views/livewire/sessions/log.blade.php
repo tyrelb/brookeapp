@@ -1,7 +1,11 @@
 <div class="max-w-4xl">
-    <x-page-header title="Log session" subtitle="Record who trained. The rate tier is picked from how many people attended." />
+    @if ($isBooking = $this->isBooking())
+        <x-page-header title="Book session" subtitle="Schedule a future session. Clients can get a calendar invite by email; only you can change a booking." />
+    @else
+        <x-page-header title="Log session" subtitle="Record who trained. The rate tier is picked from how many people attended." />
+    @endif
 
-    <form wire:submit="save(true)" class="space-y-8">
+    <form wire:submit="save({{ $isBooking ? 'false' : 'true' }})" class="space-y-8">
         <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
             <div class="sm:col-span-2">
                 <flux:select wire:model.live="service_id" label="Service">
@@ -26,7 +30,7 @@
                     @forelse ($candidates as $client)
                         <button type="button" wire:click="addClient({{ $client->id }})" wire:key="cand-{{ $client->id }}"
                             class="flex w-full items-center justify-between border-b border-zinc-100 px-3 py-2 text-left text-sm hover:bg-zinc-50 last:border-b-0 dark:border-zinc-800 dark:hover:bg-zinc-800">
-                            <span>{{ $client->full_name }}</span>
+                            <span>{{ $client->full_name }}@if ($isBooking && ! $client->email) <span class="text-xs text-amber-600">(no email)</span>@endif</span>
                             <span class="text-xs text-zinc-500">{{ $client->plan?->name ?? 'No plan' }}</span>
                         </button>
                     @empty
@@ -57,9 +61,11 @@
                             <thead class="bg-zinc-50 text-xs text-zinc-500 dark:bg-zinc-800">
                                 <tr>
                                     <th class="px-3 py-2 text-left font-normal">Client</th>
-                                    <th class="px-3 py-2 text-left font-normal">Attended</th>
+                                    @unless ($isBooking)
+                                        <th class="px-3 py-2 text-left font-normal">Attended</th>
+                                    @endunless
                                     <th class="px-3 py-2 text-left font-normal">Price override</th>
-                                    <th class="px-3 py-2 text-right font-normal">Charge</th>
+                                    <th class="px-3 py-2 text-right font-normal">{{ $isBooking ? 'Expected charge' : 'Charge' }}</th>
                                     <th></th>
                                 </tr>
                             </thead>
@@ -68,9 +74,11 @@
                                     <tr class="border-t border-zinc-100 dark:border-zinc-800" wire:key="att-{{ $clientId }}">
                                         <td class="px-3 py-2">
                                             <div class="font-medium">{{ $row['client']->full_name }}</div>
-                                            <div class="text-xs text-zinc-500">{{ $row['client']->plan?->name ?? 'No plan' }}</div>
+                                            <div class="text-xs text-zinc-500">{{ $row['client']->plan?->name ?? 'No plan' }}{{ $isBooking ? ' · '.($row['client']->email ?: 'no email') : '' }}</div>
                                         </td>
-                                        <td class="px-3 py-2"><flux:checkbox wire:model.live="attendees.{{ $clientId }}.attended" /></td>
+                                        @unless ($isBooking)
+                                            <td class="px-3 py-2"><flux:checkbox wire:model.live="attendees.{{ $clientId }}.attended" /></td>
+                                        @endunless
                                         <td class="px-3 py-2"><flux:input wire:model.live.debounce.400ms="attendees.{{ $clientId }}.override" type="number" step="0.01" min="0" placeholder="Plan rate" class="w-28" /></td>
                                         <td class="px-3 py-2 text-right tabular-nums">
                                             @if (! $row['attended'])
@@ -90,7 +98,7 @@
                             </tbody>
                             <tfoot>
                                 <tr class="border-t border-zinc-200 font-medium dark:border-zinc-700">
-                                    <td class="px-3 py-2" colspan="3">Total to Fitness Wallets</td>
+                                    <td class="px-3 py-2" colspan="{{ $isBooking ? 2 : 3 }}">{{ $isBooking ? 'Expected total when completed' : 'Total to Fitness Wallets' }}</td>
                                     <td class="px-3 py-2 text-right tabular-nums">{{ money($preview['total']) }}</td>
                                     <td></td>
                                 </tr>
@@ -101,10 +109,23 @@
             </div>
         </section>
 
+        <section>
+            @if ($isBooking)
+                <flux:checkbox wire:model="sendInvites" label="Email attendees a calendar invite" description="Includes an .ics they can accept, plus your booking instructions for changes. Clients without an email address are skipped." />
+            @else
+                <flux:checkbox wire:model="sendReceipts" label="Email attendees a receipt" description="Shows what was deducted and their remaining Fitness Wallet balance, with your booking instructions for next time." />
+            @endif
+        </section>
+
         <div class="flex flex-wrap items-center gap-3">
-            <flux:button type="submit" variant="primary" icon="check">Complete &amp; charge</flux:button>
-            <flux:button type="button" wire:click="save(false)">Save as scheduled</flux:button>
-            <flux:button :href="route('sessions.index')" variant="ghost" wire:navigate>Cancel</flux:button>
+            @if ($isBooking)
+                <flux:button type="submit" variant="primary" icon="calendar">Book session</flux:button>
+                <flux:button :href="route('sessions.calendar', ['date' => $date])" variant="ghost" wire:navigate>Cancel</flux:button>
+            @else
+                <flux:button type="submit" variant="primary" icon="check">Complete &amp; charge</flux:button>
+                <flux:button type="button" wire:click="save(false)">Save as scheduled</flux:button>
+                <flux:button :href="route('sessions.index')" variant="ghost" wire:navigate>Cancel</flux:button>
+            @endif
         </div>
     </form>
 </div>

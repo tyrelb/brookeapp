@@ -30,7 +30,9 @@ Route::middleware(['auth', 'not-suspended', 'verified'])->group(function () {
     Route::get('plans/{plan}/edit', Plans\Form::class)->name('plans.edit');
 
     Route::get('sessions', Sessions\Index::class)->name('sessions.index');
+    Route::get('sessions/calendar', Sessions\Calendar::class)->name('sessions.calendar');
     Route::get('sessions/log', Sessions\Log::class)->name('sessions.log');
+    Route::get('sessions/book', Sessions\Log::class)->defaults('mode', 'book')->name('sessions.book');
     Route::get('sessions/{trainingSession}', Sessions\Show::class)->name('sessions.show');
 
     Route::get('reports/monthly', Reports\Monthly::class)->name('reports.monthly');

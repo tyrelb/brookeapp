@@ -2,6 +2,7 @@
     <x-page-header title="Dashboard" :subtitle="now()->format('F Y')">
         <x-slot:actions>
             <flux:button :href="route('clients.create')" icon="user-plus" wire:navigate>Add client</flux:button>
+            <flux:button :href="route('sessions.book')" icon="calendar" wire:navigate>Book session</flux:button>
             <flux:button :href="route('sessions.log')" icon="plus" variant="primary" wire:navigate>Log session</flux:button>
         </x-slot:actions>
     </x-page-header>
@@ -67,7 +68,10 @@
         </section>
 
         <section class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
-            <flux:heading>Upcoming scheduled sessions</flux:heading>
+            <div class="flex items-center justify-between">
+                <flux:heading>Upcoming scheduled sessions</flux:heading>
+                <flux:link :href="route('sessions.calendar')" wire:navigate class="text-sm">Calendar</flux:link>
+            </div>
             <div class="mt-4">
                 @forelse ($upcoming as $session)
                     <div class="flex items-center justify-between gap-3 border-t border-zinc-100 py-2 text-sm first:border-t-0 dark:border-zinc-800">
@@ -78,7 +82,7 @@
                         <flux:badge size="sm" :color="$session->status->color()">{{ $session->status->label() }}</flux:badge>
                     </div>
                 @empty
-                    <flux:text class="text-sm">Nothing scheduled. Scheduling and calendar invites arrive in Phase 2.</flux:text>
+                    <flux:text class="text-sm">Nothing scheduled. <flux:link :href="route('sessions.book')" wire:navigate>Book a session</flux:link> to send clients a calendar invite.</flux:text>
                 @endforelse
             </div>
         </section>
