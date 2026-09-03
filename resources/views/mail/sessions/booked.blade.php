@@ -32,6 +32,8 @@ Phone: {{ $trainer->phone }}
 
 Email: {{ $trainer->email }}
 
+<x-mail::button :url="$client->portalUrl()">View my Fitness Wallet</x-mail::button>
+
 See you soon,<br>
 {{ $trainer->displayName() }}
 </x-mail::message>

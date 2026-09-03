@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Portal\WalletController;
 use App\Livewire\Admin;
 use App\Livewire\Clients;
 use App\Livewire\Dashboard;
@@ -10,6 +11,12 @@ use App\Livewire\Sessions;
 use App\Livewire\Settings\Business;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
+
+// Client magic link: read-only Fitness Wallet page, no login. Throttled to slow token guessing.
+Route::get('wallet/{token}', [WalletController::class, 'show'])
+    ->middleware('throttle:30,1')
+    ->where('token', '[A-Za-z0-9]{40,64}')
+    ->name('portal.wallet');
 
 Route::get('/', function () {
     return auth()->check() ? redirect()->route('dashboard') : view('welcome');

@@ -8,9 +8,11 @@ use App\Actions\RecordPayment;
 use App\Enums\PaymentMethod;
 use App\Enums\TransactionType;
 use App\Exceptions\BillingException;
+use App\Mail\WalletLinkMail;
 use App\Models\Client;
 use App\Models\WalletTransaction;
 use Flux\Flux;
+use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
@@ -139,6 +141,28 @@ class Show extends Component
         );
     }
 
+    public function emailWalletLink(): void
+    {
+        $this->authorize('update', $this->client);
+
+        if (! $this->client->email) {
+            Flux::toast('Add an email address for this client first.', variant: 'warning');
+
+            return;
+        }
+
+        $this->client->loadMissing('trainer');
+        Mail::to($this->client->email, $this->client->full_name)->queue(new WalletLinkMail($this->client));
+        Flux::toast("Fitness Wallet link emailed to {$this->client->email}.", variant: 'success');
+    }
+
+    public function resetWalletLink(): void
+    {
+        $this->authorize('update', $this->client);
+        $this->client->regeneratePortalToken();
+        Flux::toast('New link created. The old link no longer works.', variant: 'success');
+    }
+
     public function voidTransaction(int $transactionId): void
     {
         $this->authorize('update', $this->client);
@@ -174,6 +198,7 @@ class Show extends Component
                 ->sortByDesc(fn ($a) => $a->trainingSession->starts_at)
                 ->values(),
             'paymentMethods' => auth()->user()->enabledPaymentMethods(),
+            'walletUrl' => $this->client->portalUrl(),
         ])->title($this->client->full_name);
     }
 }

@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Str;
 
 class Client extends Model
 {
@@ -89,6 +90,31 @@ class Client extends Model
     public function balance(): float
     {
         return round((float) $this->transactions()->active()->sum('amount'), 2);
+    }
+
+    /**
+     * Magic-link token for the client's read-only Fitness Wallet page. Created on first use.
+     */
+    public function ensurePortalToken(): string
+    {
+        if (! $this->portal_token) {
+            $this->forceFill(['portal_token' => Str::random(48)])->save();
+        }
+
+        return $this->portal_token;
+    }
+
+    /** Invalidates any previously shared link. */
+    public function regeneratePortalToken(): string
+    {
+        $this->forceFill(['portal_token' => Str::random(48)])->save();
+
+        return $this->portal_token;
+    }
+
+    public function portalUrl(): string
+    {
+        return route('portal.wallet', ['token' => $this->ensurePortalToken()]);
     }
 
     public function scopeActive(Builder $query): Builder

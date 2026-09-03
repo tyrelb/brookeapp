@@ -81,8 +81,14 @@ php artisan billing:post-monthly-fees --date=2026-10-01
 
 Emails are queued, so run a worker (`php artisan queue:work`) locally and on Forge. The `.env.example` uses `QUEUE_CONNECTION=database`; set it to `sync` if you would rather send inline while developing.
 
+## Client wallet link (Phase 3)
+
+Every client has a private magic link (`/wallet/{token}`) that opens a read-only Fitness Wallet page with no login: balance, plan, upcoming bookings, every deposit and session, and how to reach the trainer to book or pay. The trainer's client page shows the link with **Copy link**, **Email link** and **Reset link** (which invalidates the old one). The link is also included in booking invites and receipts.
+
+Tokens are 48 random characters, the route is rate-limited, the page is `noindex`, and the link stops working if the trainer's account is suspended.
+
 ## Roadmap
 
 - **Phase 1** — auth, tenancy, clients, plans and services, Fitness Wallet ledger, session logging, payments, GST, monthly and annual reports, platform admin area.
 - **Phase 2** — scheduling calendar, booking emails with `.ics` invites, reschedule and cancellation updates, session receipts with remaining balance.
-- **Phase 3** — client magic-link portal to view deposits, session history and balance. The `clients.portal_token` column is already in place.
+- **Phase 3** — client magic-link Fitness Wallet page with balance, bookings and history, shareable from the client page and included in emails.

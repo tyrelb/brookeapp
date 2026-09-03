@@ -44,6 +44,10 @@ Your membership is paid up. Thank you!
 You can top up by e-Transfer to **{{ $trainer->etransfer_email }}**{{ count($trainer->enabledPaymentMethods()) > 1 ? ', or by '.collect($trainer->enabledPaymentMethods())->reject(fn ($m) => $m === \App\Enums\PaymentMethod::ETransfer)->map->label()->join(' or ').' in person' : '' }}.
 @endif
 
+<x-mail::button :url="$client->portalUrl()">View my Fitness Wallet</x-mail::button>
+
+Your wallet page shows every deposit and session, and this link is yours alone, so please don't forward it.
+
 **To book your next session** please contact {{ $trainer->displayName() }} directly.
 @if ($trainer->booking_instructions)
 

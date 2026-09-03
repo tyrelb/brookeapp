@@ -44,6 +44,21 @@
         </div>
     </div>
 
+    <section class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900" x-data="{ copied: false }">
+        <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+            <div class="min-w-0">
+                <flux:heading>Client wallet link</flux:heading>
+                <flux:subheading>{{ $client->first_name }} can open this private page any time to see their balance, sessions and bookings. No password needed.</flux:subheading>
+                <div class="mt-2 truncate rounded-md bg-zinc-50 px-3 py-1.5 font-mono text-xs text-zinc-600 dark:bg-zinc-800 dark:text-zinc-300" x-ref="url">{{ $walletUrl }}</div>
+            </div>
+            <div class="flex shrink-0 flex-wrap gap-2">
+                <flux:button size="sm" icon="clipboard" x-on:click="navigator.clipboard.writeText($refs.url.textContent.trim()); copied = true; setTimeout(() => copied = false, 2000)"><span x-text="copied ? 'Copied!' : 'Copy link'">Copy link</span></flux:button>
+                <flux:button size="sm" icon="envelope" wire:click="emailWalletLink" wire:confirm="Email the wallet link to {{ $client->email ?: 'this client (no email on file)' }}?">Email link</flux:button>
+                <flux:button size="sm" variant="ghost" wire:click="resetWalletLink" wire:confirm="Create a new link? The current link will stop working immediately.">Reset link</flux:button>
+            </div>
+        </div>
+    </section>
+
     <section>
         <flux:heading size="lg" class="mb-3">Ledger</flux:heading>
         @if ($transactions->isEmpty())
