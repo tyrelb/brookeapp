@@ -9,6 +9,7 @@ use App\Enums\SessionStatus;
 use App\Exceptions\BillingException;
 use App\Livewire\Sessions\Concerns\PreviewsCharges;
 use App\Models\Client;
+use App\Models\Gym;
 use App\Models\Service;
 use App\Models\TrainingSession;
 use Flux\Flux;
@@ -27,6 +28,8 @@ class Log extends Component
     public string $mode = 'log'; // log | book
 
     public string $service_id = '';
+
+    public string $gym_id = '';
 
     public string $date = '';
 
@@ -62,6 +65,8 @@ class Log extends Component
             $this->date = today()->toDateString();
             $this->time = now()->subHour()->format('H:00');
         }
+
+        $this->gym_id = (string) ($trainer->defaultGym()?->id ?? '');
 
         $first = $this->services()->first();
         if ($first) {
@@ -109,6 +114,7 @@ class Log extends Component
 
         $this->validate([
             'service_id' => ['required', Rule::exists('services', 'id')->where('user_id', auth()->id())],
+            'gym_id' => ['nullable', Rule::exists('gyms', 'id')->where('user_id', auth()->id())],
             'date' => ['required', 'date'],
             'time' => ['required', 'date_format:H:i'],
             'duration_minutes' => ['required', 'integer', 'min:5', 'max:480'],
@@ -133,6 +139,7 @@ class Log extends Component
             $session = DB::transaction(function () use ($complete) {
                 $session = TrainingSession::create([
                     'service_id' => (int) $this->service_id,
+                    'gym_id' => $this->gym_id !== '' ? (int) $this->gym_id : null,
                     'starts_at' => "{$this->date} {$this->time}:00",
                     'duration_minutes' => (int) $this->duration_minutes,
                     'status' => SessionStatus::Scheduled,
@@ -194,6 +201,7 @@ class Log extends Component
 
         return view('livewire.sessions.log', [
             'services' => $this->services(),
+            'gyms' => Gym::query()->active()->orderBy('name')->get(),
             'candidates' => $candidates,
             'selected' => $selected,
             'preview' => $this->previewCharges($service, $selected),

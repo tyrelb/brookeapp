@@ -9,6 +9,7 @@ use App\Livewire\Reports;
 use App\Livewire\Services;
 use App\Livewire\Sessions;
 use App\Livewire\Settings\Business;
+use App\Livewire\Settings\Gyms;
 use Illuminate\Support\Facades\Route;
 use Livewire\Volt\Volt;
 
@@ -44,6 +45,7 @@ Route::middleware(['auth', 'not-suspended', 'verified'])->group(function () {
 
     Route::get('reports/monthly', Reports\Monthly::class)->name('reports.monthly');
     Route::get('reports/annual', Reports\Annual::class)->name('reports.annual');
+    Route::get('reports/gym-usage', Reports\GymUsage::class)->name('reports.gym-usage');
 });
 
 Route::middleware(['auth', 'not-suspended', 'verified', 'admin'])->prefix('admin')->name('admin.')->group(function () {
@@ -59,6 +61,7 @@ Route::middleware(['auth', 'not-suspended'])->group(function () {
     Volt::route('settings/password', 'settings.password')->name('settings.password');
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
     Route::get('settings/business', Business::class)->name('settings.business');
+    Route::get('settings/gyms', Gyms::class)->name('settings.gyms');
 });
 
 require __DIR__.'/auth.php';

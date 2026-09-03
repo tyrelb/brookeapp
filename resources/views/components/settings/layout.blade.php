@@ -3,6 +3,7 @@
         <flux:navlist>
             <flux:navlist.item href="{{ route('settings.profile') }}" wire:navigate>Profile</flux:navlist.item>
             <flux:navlist.item href="{{ route('settings.business') }}" wire:navigate>Business</flux:navlist.item>
+            <flux:navlist.item href="{{ route('settings.gyms') }}" wire:navigate>Gyms</flux:navlist.item>
             <flux:navlist.item href="{{ route('settings.password') }}" wire:navigate>Password</flux:navlist.item>
             <flux:navlist.item href="{{ route('settings.appearance') }}" wire:navigate>Appearance</flux:navlist.item>
         </flux:navlist>

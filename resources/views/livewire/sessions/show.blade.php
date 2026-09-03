@@ -1,5 +1,5 @@
 <div class="max-w-4xl space-y-6">
-    <x-page-header :title="$session->service->name" :subtitle="$session->starts_at->format('l, F j, Y \a\t g:i a').' – '.$session->endsAt()->format('g:i a').' · '.$session->duration_minutes.' min'">
+    <x-page-header :title="$session->service->name" :subtitle="$session->starts_at->format('l, F j, Y \a\t g:i a').' – '.$session->endsAt()->format('g:i a').' · '.$session->duration_minutes.' min'.($session->gym ? ' · '.$session->gym->name : '')">
         <x-slot:actions>
             <flux:badge :color="$session->status->color()">{{ $session->status->label() }}</flux:badge>
             @if ($session->isScheduled())
@@ -115,6 +115,14 @@
                         <flux:select.option value="{{ $service->id }}">{{ $service->name }}</flux:select.option>
                     @endforeach
                 </flux:select>
+                @if ($gyms->isNotEmpty())
+                    <flux:select wire:model="newGymId" label="Gym">
+                        <flux:select.option value="">No gym</flux:select.option>
+                        @foreach ($gyms as $gym)
+                            <flux:select.option value="{{ $gym->id }}">{{ $gym->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                @endif
                 <div class="grid gap-4 sm:grid-cols-2">
                     <flux:input wire:model="newDate" label="Date" type="date" />
                     <flux:input wire:model="newTime" label="Start time" type="time" />
@@ -164,6 +172,21 @@
             @if ($session->notes)
                 <flux:text class="mt-3 whitespace-pre-line text-sm">{{ $session->notes }}</flux:text>
             @endif
+        </section>
+    @endif
+    @if ($gyms->isNotEmpty())
+        <section class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 print:hidden">
+            <div class="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
+                <div class="w-full sm:w-72">
+                    <flux:select wire:model.live="newGymId" wire:change="setGym($event.target.value)" label="Gym" description="Used for the gym usage report.">
+                        <flux:select.option value="">No gym</flux:select.option>
+                        @foreach ($gyms as $gym)
+                            <flux:select.option value="{{ $gym->id }}">{{ $gym->name }}{{ $gym->active ? '' : ' (inactive)' }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                </div>
+                <flux:checkbox :checked="$session->gym_billable" wire:click="toggleGymBillable" label="Counts toward gym usage" description="Untick if the gym shouldn't charge for this session." />
+            </div>
         </section>
     @endif
 </div>

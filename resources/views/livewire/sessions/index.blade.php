@@ -36,7 +36,7 @@
                             <flux:link :href="route('sessions.show', $session)" wire:navigate>{{ $session->starts_at->format('D M j, Y') }}</flux:link>
                             <div class="text-xs font-normal text-zinc-500">{{ $session->starts_at->format('g:i a') }} · {{ $session->duration_minutes }} min</div>
                         </flux:table.cell>
-                        <flux:table.cell>{{ $session->service->name }}</flux:table.cell>
+                        <flux:table.cell>{{ $session->service->name }}@if ($session->gym)<div class="text-xs text-zinc-500">{{ $session->gym->name }}</div>@endif</flux:table.cell>
                         <flux:table.cell class="whitespace-normal">
                             @foreach ($session->attendees as $attendee)
                                 <span class="{{ $attendee->attended ? '' : 'line-through text-zinc-400' }}">{{ $attendee->client->full_name }}</span>@if (! $loop->last), @endif

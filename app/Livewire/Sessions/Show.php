@@ -11,6 +11,7 @@ use App\Enums\SessionStatus;
 use App\Exceptions\BillingException;
 use App\Livewire\Sessions\Concerns\PreviewsCharges;
 use App\Models\Client;
+use App\Models\Gym;
 use App\Models\Service;
 use App\Models\TrainingSession;
 use Flux\Flux;
@@ -34,6 +35,8 @@ class Show extends Component
 
     // Reschedule modal
     public string $newServiceId = '';
+
+    public string $newGymId = '';
 
     public string $newDate = '';
 
@@ -66,6 +69,7 @@ class Show extends Component
     private function syncScheduleFromModel(): void
     {
         $this->newServiceId = (string) $this->trainingSession->service_id;
+        $this->newGymId = (string) ($this->trainingSession->gym_id ?? '');
         $this->newDate = $this->trainingSession->starts_at->toDateString();
         $this->newTime = $this->trainingSession->starts_at->format('H:i');
         $this->newDuration = (string) $this->trainingSession->duration_minutes;
@@ -196,6 +200,7 @@ class Show extends Component
 
         $this->validate([
             'newServiceId' => ['required', Rule::exists('services', 'id')->where('user_id', auth()->id())],
+            'newGymId' => ['nullable', Rule::exists('gyms', 'id')->where('user_id', auth()->id())],
             'newDate' => ['required', 'date'],
             'newTime' => ['required', 'date_format:H:i'],
             'newDuration' => ['required', 'integer', 'min:5', 'max:480'],
@@ -203,6 +208,7 @@ class Show extends Component
 
         $this->trainingSession->update([
             'service_id' => (int) $this->newServiceId,
+            'gym_id' => $this->newGymId !== '' ? (int) $this->newGymId : null,
             'starts_at' => "{$this->newDate} {$this->newTime}:00",
             'duration_minutes' => (int) $this->newDuration,
         ]);
@@ -216,6 +222,21 @@ class Show extends Component
 
         Flux::modal('reschedule')->close();
         Flux::toast($message, variant: 'success');
+    }
+
+    /** Sets the gym for any session (including completed ones) and toggles whether it counts on the gym report. */
+    public function setGym(string $gymId): void
+    {
+        $this->authorize('update', $this->trainingSession);
+        $this->validate(['newGymId' => ['nullable', Rule::exists('gyms', 'id')->where('user_id', auth()->id())]]);
+        $this->trainingSession->update(['gym_id' => $gymId !== '' ? (int) $gymId : null]);
+        Flux::toast('Gym updated.', variant: 'success');
+    }
+
+    public function toggleGymBillable(): void
+    {
+        $this->authorize('update', $this->trainingSession);
+        $this->trainingSession->update(['gym_billable' => ! $this->trainingSession->gym_billable]);
     }
 
     public function reopen(): void
@@ -282,7 +303,7 @@ class Show extends Component
 
     public function render()
     {
-        $session = $this->trainingSession->fresh(['service', 'attendees.client.plan.rates']);
+        $session = $this->trainingSession->fresh(['service', 'gym', 'attendees.client.plan.rates']);
         $this->trainingSession = $session;
 
         $selected = $session->attendees->pluck('client')->keyBy('id');
@@ -300,6 +321,7 @@ class Show extends Component
             'session' => $session,
             'candidates' => $candidates,
             'services' => Service::query()->where('active', true)->orderBy('name')->get(),
+            'gyms' => Gym::query()->orderByDesc('active')->orderBy('name')->get(),
             'preview' => $session->isScheduled() ? $this->previewCharges($session->service, $selected) : null,
         ])->title($session->service->name.' — '.$session->starts_at->format('M j, Y'));
     }

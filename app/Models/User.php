@@ -111,6 +111,19 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(WalletTransaction::class);
     }
 
+    public function gyms(): HasMany
+    {
+        return $this->hasMany(Gym::class);
+    }
+
+    /** The gym new sessions default to: the flagged default, else the only active gym. */
+    public function defaultGym(): ?Gym
+    {
+        $active = $this->gyms()->where('active', true)->orderByDesc('is_default')->orderBy('name')->get();
+
+        return $active->firstWhere('is_default', true) ?? ($active->count() === 1 ? $active->first() : null);
+    }
+
     /**
      * Effective GST rate as a percentage (0 when the trainer is not registered).
      */

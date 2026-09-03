@@ -33,7 +33,7 @@ class Index extends Component
     public function render()
     {
         $sessions = TrainingSession::query()
-            ->with(['service', 'attendees.client'])
+            ->with(['service', 'gym', 'attendees.client'])
             ->when($this->status !== '', fn ($q) => $q->where('status', $this->status))
             ->when($this->month !== '', function ($q) {
                 $start = Carbon::createFromFormat('Y-m', $this->month)->startOfMonth();

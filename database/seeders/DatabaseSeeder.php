@@ -5,10 +5,12 @@ namespace Database\Seeders;
 use App\Actions\CompleteTrainingSession;
 use App\Actions\PostMonthlyFee;
 use App\Actions\RecordPayment;
+use App\Enums\GymBillingModel;
 use App\Enums\PaymentMethod;
 use App\Enums\PlanType;
 use App\Enums\SessionStatus;
 use App\Models\Client;
+use App\Models\Gym;
 use App\Models\Plan;
 use App\Models\Service;
 use App\Models\TrainingSession;
@@ -144,6 +146,19 @@ class DatabaseSeeder extends Seeder
                 $session->attendees()->create(['client_id' => $clients[$name]->id]);
             }
         }
+
+        // The gym Brooke rents space at: monthly rate plus per-session usage, with GST.
+        $gym = Gym::create([
+            'user_id' => $brooke->id,
+            'name' => 'Westside Athletic Club',
+            'billing_model' => GymBillingModel::MonthlyPlusUsage,
+            'monthly_fee' => 150,
+            'usage_rates' => Gym::DEFAULT_RATES,
+            'charges_gst' => true,
+            'gst_rate' => 5,
+            'is_default' => true,
+        ]);
+        TrainingSession::query()->forTrainer($brooke)->update(['gym_id' => $gym->id]);
 
         // Platform administrator (support + statistics; never sees trainers' billing).
         User::factory()->create([

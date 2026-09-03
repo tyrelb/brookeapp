@@ -7,6 +7,16 @@
 
     <form wire:submit="save({{ $isBooking ? 'false' : 'true' }})" class="space-y-8">
         <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
+            @if ($gyms->count() > 1)
+                <div class="sm:col-span-2 lg:col-span-4">
+                    <flux:select wire:model="gym_id" label="Gym" description="Where this session happens; used for the gym usage report.">
+                        <flux:select.option value="">No gym</flux:select.option>
+                        @foreach ($gyms as $gym)
+                            <flux:select.option value="{{ $gym->id }}">{{ $gym->name }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                </div>
+            @endif
             <div class="sm:col-span-2">
                 <flux:select wire:model.live="service_id" label="Service">
                     @foreach ($services as $service)

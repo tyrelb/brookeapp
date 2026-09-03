@@ -22,6 +22,8 @@ class TrainingSession extends Model
     protected $fillable = [
         'user_id',
         'service_id',
+        'gym_id',
+        'gym_billable',
         'starts_at',
         'duration_minutes',
         'status',
@@ -39,6 +41,7 @@ class TrainingSession extends Model
             'completed_at' => 'datetime',
             'status' => SessionStatus::class,
             'duration_minutes' => 'integer',
+            'gym_billable' => 'boolean',
             'ics_sequence' => 'integer',
             'invites_sent_at' => 'datetime',
         ];
@@ -47,6 +50,11 @@ class TrainingSession extends Model
     public function service(): BelongsTo
     {
         return $this->belongsTo(Service::class);
+    }
+
+    public function gym(): BelongsTo
+    {
+        return $this->belongsTo(Gym::class);
     }
 
     public function attendees(): HasMany

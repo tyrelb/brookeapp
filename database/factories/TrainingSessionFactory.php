@@ -18,6 +18,8 @@ class TrainingSessionFactory extends Factory
         return [
             'user_id' => User::factory(),
             'service_id' => fn (array $attributes) => Service::factory()->create(['user_id' => $attributes['user_id']])->id,
+            'gym_id' => null,
+            'gym_billable' => true,
             'starts_at' => now()->startOfHour(),
             'duration_minutes' => 60,
             'status' => SessionStatus::Scheduled,

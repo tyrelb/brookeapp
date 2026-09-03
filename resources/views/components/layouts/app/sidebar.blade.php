@@ -4,7 +4,7 @@
         @include('partials.head')
     </head>
     <body class="min-h-screen bg-white dark:bg-zinc-800">
-        <flux:sidebar sticky stashable class="border-r border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
+        <flux:sidebar sticky stashable class="print:hidden border-r border-zinc-200 bg-zinc-50 dark:border-zinc-700 dark:bg-zinc-900">
             <flux:sidebar.toggle class="lg:hidden" icon="x-mark" />
 
             <a href="{{ route('dashboard') }}" class="mr-5 flex items-center space-x-2" wire:navigate>
@@ -33,6 +33,7 @@
                 <flux:navlist.group heading="Reports" class="grid">
                     <flux:navlist.item icon="chart-bar" :href="route('reports.monthly')" :current="request()->routeIs('reports.monthly')" wire:navigate>Monthly report</flux:navlist.item>
                     <flux:navlist.item icon="document-chart-bar" :href="route('reports.annual')" :current="request()->routeIs('reports.annual')" wire:navigate>Annual report</flux:navlist.item>
+                    <flux:navlist.item icon="building-storefront" :href="route('reports.gym-usage')" :current="request()->routeIs('reports.gym-usage')" wire:navigate>Gym usage</flux:navlist.item>
                 </flux:navlist.group>
             </flux:navlist>
 
@@ -86,7 +87,7 @@
         </flux:sidebar>
 
         <!-- Mobile User Menu -->
-        <flux:header class="lg:hidden">
+        <flux:header class="lg:hidden print:hidden">
             <flux:sidebar.toggle class="lg:hidden" icon="bars-2" inset="left" />
 
             <flux:spacer />
