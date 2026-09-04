@@ -180,7 +180,7 @@ it('shows the month and week calendar with only this trainer\'s sessions', funct
     $theirs = TrainingSession::factory()->create(['user_id' => $other->id, 'starts_at' => '2026-09-15 08:00:00']);
     SessionAttendee::factory()->create(['training_session_id' => $theirs->id, 'client_id' => $otherClient->id]);
 
-    Livewire::test(Calendar::class, ['date' => '2026-09-01'])
+    Livewire::test(Calendar::class, ['date' => '2026-09-01', 'view' => 'month'])
         ->assertSee('September 2026')
         ->assertSee('Ava')
         ->assertDontSee('Zed')
@@ -225,7 +225,7 @@ it('shows a single day with every session on it and steps one day at a time', fu
         ->call('previous')
         ->assertSee('Tuesday, September 15, 2026');
 
-    Livewire::test(Calendar::class, ['date' => '2026-09-01'])
+    Livewire::test(Calendar::class, ['date' => '2026-09-01', 'view' => 'month'])
         ->assertSee('September 2026')
         ->call('showDay', '2026-09-15')
         ->assertSet('view', 'day')
@@ -233,6 +233,18 @@ it('shows a single day with every session on it and steps one day at a time', fu
         ->assertSee('Tuesday, September 15, 2026');
 
     $this->get(route('sessions.calendar', ['view' => 'day', 'date' => '2026-09-15']))->assertOk()->assertSee('Tuesday, September 15, 2026');
+});
+
+it('opens on today in the day view by default', function () {
+    Livewire::test(Calendar::class)
+        ->assertSet('view', 'day')
+        ->assertSet('date', today()->toDateString())
+        ->assertSee(today()->format('l, F j, Y'))
+        ->assertSee('Today');
+
+    Livewire::test(Calendar::class, ['view' => 'bogus'])->assertSet('view', 'day');
+
+    $this->get(route('sessions.calendar'))->assertOk()->assertSee(today()->format('l, F j, Y'));
 });
 
 it('saves notification defaults in business settings', function () {

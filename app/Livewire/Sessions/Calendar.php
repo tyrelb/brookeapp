@@ -11,13 +11,13 @@ use Livewire\Component;
 #[Title('Calendar')]
 class Calendar extends Component
 {
-    private const VIEWS = ['month', 'week', 'day'];
+    private const VIEWS = ['day', 'week', 'month'];
 
     #[Url]
     public string $date = ''; // any date inside the visible month / week, or the visible day itself
 
     #[Url]
-    public string $view = 'month'; // month | week | day
+    public string $view = 'day'; // day | week | month
 
     public function mount(): void
     {
@@ -26,7 +26,7 @@ class Calendar extends Component
             : today()->toDateString();
 
         if (! in_array($this->view, self::VIEWS, true)) {
-            $this->view = 'month';
+            $this->view = 'day';
         }
     }
 
@@ -47,7 +47,7 @@ class Calendar extends Component
 
     public function setView(string $view): void
     {
-        $this->view = in_array($view, self::VIEWS, true) ? $view : 'month';
+        $this->view = in_array($view, self::VIEWS, true) ? $view : 'day';
     }
 
     /** Jump to the day view for one date (from a day cell in the month or week view). */

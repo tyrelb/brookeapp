@@ -42,7 +42,7 @@ it('books a repeat from the Book form with a preview and a required end date', f
     $page->set('until', '2026-09-01')->call('save', false)->assertHasErrors(['until']);
     $page->set('until', '2028-01-01')->assertSee('12 months');
 
-    $page->set('until', '2026-09-24')->call('save', false)->assertHasNoErrors()->assertRedirect(route('sessions.calendar', ['date' => '2026-09-08']));
+    $page->set('until', '2026-09-24')->call('save', false)->assertHasNoErrors()->assertRedirect(route('sessions.calendar', ['view' => 'month', 'date' => '2026-09-08']));
 
     $series = SessionSeries::first();
     expect($series->sessions)->toHaveCount(6)

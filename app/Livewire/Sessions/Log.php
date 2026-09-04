@@ -294,7 +294,7 @@ class Log extends Component
         }
 
         Flux::toast($message, variant: 'success');
-        $this->redirectRoute('sessions.calendar', ['date' => $this->date], navigate: true);
+        $this->redirectRoute('sessions.calendar', ['view' => 'month', 'date' => $this->date], navigate: true);
     }
 
     private function services()

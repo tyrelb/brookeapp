@@ -7,9 +7,9 @@
                 <flux:button icon="chevron-right" wire:click="next" />
             </flux:button.group>
             <flux:button.group>
-                <flux:button :variant="$view === 'month' ? 'primary' : 'outline'" wire:click="setView('month')">Month</flux:button>
-                <flux:button :variant="$view === 'week' ? 'primary' : 'outline'" wire:click="setView('week')">Week</flux:button>
                 <flux:button :variant="$view === 'day' ? 'primary' : 'outline'" wire:click="setView('day')">Day</flux:button>
+                <flux:button :variant="$view === 'week' ? 'primary' : 'outline'" wire:click="setView('week')">Week</flux:button>
+                <flux:button :variant="$view === 'month' ? 'primary' : 'outline'" wire:click="setView('month')">Month</flux:button>
             </flux:button.group>
             <flux:button :href="route('sessions.book', ['date' => $date])" icon="calendar" variant="primary" wire:navigate>Book session</flux:button>
         </x-slot:actions>
