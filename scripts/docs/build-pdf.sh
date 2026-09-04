@@ -20,12 +20,12 @@ if [ ! -x "$P" ]; then
 fi
 command -v pdftotext >/dev/null || { echo "pdftotext (poppler) is required for Contents page numbers" >&2; exit 1; }
 
-BUILD=public/docs/.build
+BUILD=storage/app/docs-build
 OUT=resources/docs/BrookeApp-User-Guide.pdf
 mkdir -p "$BUILD"
 
 # Images are referenced as images/<name>.png relative to the build file.
-rm -rf "$BUILD/images"; cp -R public/docs/images "$BUILD/images"
+rm -rf "$BUILD/images"; cp -R public/images/docs "$BUILD/images"
 
 BUILD_ID="$(git rev-parse --short HEAD 2>/dev/null || echo dev)"   # make-pdf prints the date itself
 

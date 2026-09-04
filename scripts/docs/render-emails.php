@@ -20,7 +20,7 @@ use App\Models\User;
 $trainer = User::where('email', 'brooke@example.com')->firstOrFail();
 auth()->login($trainer); // tenant scopes key off the logged-in trainer
 
-$dir = public_path('docs/.build');
+$dir = storage_path('app/docs-build');
 if (! is_dir($dir)) {
     mkdir($dir, 0755, true);
 }

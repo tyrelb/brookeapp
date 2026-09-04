@@ -5,7 +5,7 @@
  * text page by page with pdftotext. Used by scripts/docs/build-pdf.sh for the two-pass
  * build that puts real page numbers in the Contents table.
  *
- *   php scripts/docs/toc-pages.php resources/docs/BrookeApp-User-Guide.pdf > public/docs/.build/pages.json
+ *   php scripts/docs/toc-pages.php resources/docs/BrookeApp-User-Guide.pdf > storage/app/docs-build/pages.json
  */
 
 $pdf = $argv[1] ?? null;

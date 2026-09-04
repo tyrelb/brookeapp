@@ -23,7 +23,7 @@ Every client is on a **plan**, and a plan works in one of two ways.
 
 The dashboard is the first thing you see after logging in. It answers "how is this month going?" and "who needs my attention?" at a glance.
 
-![The dashboard for the demo trainer, Brooke Fitness](/docs/images/dashboard.png)
+![The dashboard for the demo trainer, Brooke Fitness](/images/docs/dashboard.png)
 *The dashboard. The three buttons at the top right are the actions you will use most: Add client, Book session and Log session.*
 
 - **The four cards** show active clients, sessions completed this month, revenue before GST (with the GST charged underneath) and payments received this month.
@@ -40,7 +40,7 @@ The sidebar on the left is the same on every page:
 - **Reports**: Monthly report, Annual report and Gym usage.
 - **Your name** at the bottom opens a menu with Settings, this Documentation, and Log Out.
 
-![The user menu at the bottom of the sidebar, with Documentation highlighted](/docs/images/menu-documentation.png)
+![The user menu at the bottom of the sidebar, with Documentation highlighted](/images/docs/menu-documentation.png)
 *Click your name at the bottom of the sidebar to open this guide, or to reach Settings.*
 
 > **Tip:** Every chapter of this guide can be printed on its own with **Print this page**, and the whole guide is available as a PDF with **Download PDF** at the top of the Documentation page.

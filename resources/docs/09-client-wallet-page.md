@@ -2,7 +2,7 @@ Each client has a private web page that shows their side of the story: balance, 
 
 ## What the client sees
 
-![The client's Fitness Wallet page, list view](/docs/images/portal-list.png)
+![The client's Fitness Wallet page, list view](/images/docs/portal-list.png)
 *Ava's page. The balance is followed by a plain-English reading of it, such as "about 5 single sessions left".*
 
 - **Fitness Wallet balance** (or **Account balance** for a member) with a sentence explaining what it means.
@@ -12,7 +12,7 @@ Each client has a private web page that shows their side of the story: balance, 
 
 Switch to **Calendar** with the buttons beside "Your sessions" to see the month at a glance, with arrows for previous and next months.
 
-![The client's Fitness Wallet page, calendar view](/docs/images/portal-calendar.png)
+![The client's Fitness Wallet page, calendar view](/images/docs/portal-calendar.png)
 *Calendar view of the same page.*
 
 ## Sharing the link safely

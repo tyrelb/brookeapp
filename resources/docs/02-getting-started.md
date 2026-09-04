@@ -5,19 +5,19 @@ This chapter takes you from no account to a workspace that is ready for your fir
 1. Open BrookeApp in your browser and click **Sign up** under the login form.
 2. Enter your name, email address and a password, then click **Create account**.
 
-![The Create an account form filled in](/docs/images/register.png)
+![The Create an account form filled in](/images/docs/register.png)
 *Your name here is what clients will see unless you set a business name later in Settings.*
 
 3. Check your inbox for a message from BrookeApp and click the verification link. Until you do, the app shows a reminder page instead of the dashboard.
 
-![The reminder page shown until you verify your email](/docs/images/verify-email.png)
+![The reminder page shown until you verify your email](/images/docs/verify-email.png)
 *If the message has not arrived after a few minutes, check your junk folder, then use Resend verification email.*
 
 ## Log in
 
 Come back any time by entering your email and password. Tick **Remember me** on your own computer so you stay logged in.
 
-![The login form](/docs/images/login.png)
+![The login form](/images/docs/login.png)
 *Forgot your password? follows the usual email link flow.*
 
 > **Important:** Everything you enter is private to your account. Other trainers on BrookeApp cannot see your clients, prices or money.

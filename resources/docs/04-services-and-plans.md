@@ -4,12 +4,12 @@ Pricing in BrookeApp is two lists. **Services** are what you offer. **Plans** ar
 
 Open **Services** in the sidebar.
 
-![The Services page](/docs/images/services.png)
+![The Services page](/images/docs/services.png)
 *Each service shows its default length and how many sessions have been logged with it.*
 
 To add one, click **Add service**.
 
-![The Add service form](/docs/images/service-form.png)
+![The Add service form](/images/docs/service-form.png)
 *A service needs a name and a default duration; the duration is only a starting point and can be changed on each session.*
 
 1. **Name** it the way you would say it to a client, for example "Personal Training (60 min)" or "Small Group Strength (45 min)".
@@ -23,14 +23,14 @@ To add one, click **Add service**.
 
 Open **Plans** in the sidebar. Each card shows the plan's type, how many clients are on it, and its rate grid.
 
-![The Plans page with three plans](/docs/images/plans.png)
+![The Plans page with three plans](/images/docs/plans.png)
 *The demo trainer has two pay-as-you-go plans with different rate grids and one monthly plan.*
 
 ### A pay-as-you-go plan
 
 Click **Add plan** and leave **Pay-as-you-go (Fitness Wallet)** selected.
 
-![The Add plan form for a pay-as-you-go plan, with the rate grid](/docs/images/plan-form-rates.png)
+![The Add plan form for a pay-as-you-go plan, with the rate grid](/images/docs/plan-form-rates.png)
 *The rate grid: one row per active service, one column per group size.*
 
 1. Give the plan a **name** clients will recognise, such as "Standard pay-as-you-go".
@@ -42,7 +42,7 @@ Click **Add plan** and leave **Pay-as-you-go (Fitness Wallet)** selected.
 
 Click **Add plan** and choose **Monthly membership**. The rate grid disappears and two fields take its place.
 
-![The Add plan form for a monthly membership](/docs/images/plan-form-monthly.png)
+![The Add plan form for a monthly membership](/images/docs/plan-form-monthly.png)
 *A monthly plan has a fee and a billing day instead of a rate grid.*
 
 1. **Monthly fee (before GST).** GST is added when the fee is posted.

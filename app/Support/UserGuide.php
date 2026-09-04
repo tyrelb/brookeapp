@@ -118,14 +118,14 @@ class UserGuide
     }
 
     /**
-     * Root-relative image paths a chapter refers to, e.g. "/docs/images/clients.png".
+     * Root-relative image paths a chapter refers to, e.g. "/images/docs/clients.png".
      *
      * @param  Chapter  $chapter
      * @return list<string>
      */
     public function images(array $chapter): array
     {
-        preg_match_all('/\]\((\/docs\/images\/[^)\s]+)\)/', $this->markdown($chapter), $matches);
+        preg_match_all('/\]\((\/images\/docs\/[^)\s]+)\)/', $this->markdown($chapter), $matches);
 
         return array_values(array_unique($matches[1]));
     }

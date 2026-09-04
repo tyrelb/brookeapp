@@ -4,14 +4,14 @@ Settings is reached from the menu under your name at the bottom of the sidebar. 
 
 Your name and login email. Changing your email means verifying the new address before the dashboard opens again. The **Delete account** button at the bottom removes your workspace and everything in it after you confirm with your password; there is no undo.
 
-![The Profile settings page](/docs/images/settings-profile.png)
+![The Profile settings page](/images/docs/settings-profile.png)
 *Profile is your login identity. The name clients see comes from Business.*
 
 ## Business
 
 This page controls what clients see and how tax is handled.
 
-![The Business settings page](/docs/images/settings-business.png)
+![The Business settings page](/images/docs/settings-business.png)
 *Business settings for the demo trainer.*
 
 1. **Business name** and **Phone** appear in client emails, on the client's Fitness Wallet page, and in reports. Leave the name blank to use your own name.
@@ -27,12 +27,12 @@ Click **Save**.
 
 If a gym or studio charges you rent, add it here so the Gym usage report can tell you what you owe each month.
 
-![The Gyms settings page with one gym set up](/docs/images/settings-gyms.png)
+![The Gyms settings page with one gym set up](/images/docs/settings-gyms.png)
 *Each gym card shows how it bills you and how many sessions have been logged there.*
 
 Click **Add gym** (or **Edit** on an existing gym) to open the form.
 
-![The gym form](/docs/images/settings-gym-form.png)
+![The gym form](/images/docs/settings-gym-form.png)
 *The gym form. The rate card is pre-filled with typical per-session rates by group size.*
 
 - **How does this gym charge you?** Pick one: a monthly rate only, a monthly rate plus a charge per session, or per-session usage only.
@@ -50,5 +50,5 @@ Enter your current password, then the new one twice.
 
 Choose Light, Dark, or System to follow your computer's setting. This only affects your own screen.
 
-![The Appearance settings page](/docs/images/settings-appearance.png)
+![The Appearance settings page](/images/docs/settings-appearance.png)
 *Appearance. The screenshots in this guide use Light.*

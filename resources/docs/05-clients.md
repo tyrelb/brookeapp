@@ -4,7 +4,7 @@ A client's page is where money is recorded and where you check what they owe or 
 
 Open **Clients** in the sidebar.
 
-![The Clients list](/docs/images/clients.png)
+![The Clients list](/images/docs/clients.png)
 *Balance is what the client has on credit (black) or owes (red).*
 
 - **Search** by name or email.
@@ -16,7 +16,7 @@ Open **Clients** in the sidebar.
 
 Click **Add client**.
 
-![The client form](/docs/images/client-form.png)
+![The client form](/images/docs/client-form.png)
 *The client form. Plan is the important choice; everything else can be filled in later.*
 
 1. **First name** is required; last name, email and phone are optional but the email is needed for invites, receipts and the wallet link.
@@ -28,7 +28,7 @@ Click **Add client**.
 
 ## The client page
 
-![Ava's client page: balance, contact, wallet link and ledger](/docs/images/client-page.png)
+![Ava's client page: balance, contact, wallet link and ledger](/images/docs/client-page.png)
 *A pay-as-you-go client. The buttons across the top are the actions you take on this person.*
 
 - **Fitness Wallet balance** (or **Account balance** for a monthly member) shows prepaid credit or an amount owing, GST included.
@@ -41,7 +41,7 @@ Click **Add client**.
 
 When a client pays you, click **Record payment**.
 
-![The Record payment dialog](/docs/images/client-record-payment.png)
+![The Record payment dialog](/images/docs/client-record-payment.png)
 *A deposit. Only the payment methods you enabled in Settings are offered.*
 
 1. **Amount received**, exactly as paid. Deposits include GST; the app works out the tax portion for your reports.
@@ -56,7 +56,7 @@ For a monthly member, a payment pays down the fee that was posted; for a pay-as-
 
 For anything that is not a payment or a session, use **Adjustment**.
 
-![The Adjustment or refund dialog](/docs/images/client-adjustment.png)
+![The Adjustment or refund dialog](/images/docs/client-adjustment.png)
 *Adjustments always need a note so you can explain them later.*
 
 - **Credit** adds to the balance, for example a referral bonus or a make-good for a cancelled session.
@@ -71,14 +71,14 @@ Every ledger row that is not a session charge has a **Void** button. Voiding doe
 
 Monthly fees post themselves each morning. If you need one now, for example on the day a new member joins, open the member's page and click **Post monthly fee**. It is safe to click twice; a month is never charged twice.
 
-![Finn's client page with the Post monthly fee button highlighted](/docs/images/client-monthly-fee.png)
+![Finn's client page with the Post monthly fee button highlighted](/images/docs/client-monthly-fee.png)
 *Monthly members have Post monthly fee in the toolbar and their balance is labelled Account balance.*
 
 ## The private wallet link
 
 Every client has a private web address that shows their balance, upcoming bookings and history without logging in. It is included in invites and receipts automatically.
 
-![The Client wallet link panel with Copy, Email and Reset](/docs/images/client-wallet-link.png)
+![The Client wallet link panel with Copy, Email and Reset](/images/docs/client-wallet-link.png)
 *The wallet link panel on the client page.*
 
 - **Copy link** puts it on your clipboard to paste into a text message.

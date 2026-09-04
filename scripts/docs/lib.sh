@@ -13,7 +13,7 @@ set -u
 
 B="${BROWSE_BIN:-$HOME/.claude/skills/gstack/browse/dist/browse}"
 BASE_URL="${DOCS_BASE_URL:-https://brookeapp.test}"
-IMG="${DOCS_IMAGE_DIR:-$(git rev-parse --show-toplevel)/public/docs/images}"
+IMG="${DOCS_IMAGE_DIR:-$(git rev-parse --show-toplevel)/public/images/docs}"
 HL_COLOR="#e11d48"
 
 mkdir -p "$IMG"
@@ -36,7 +36,7 @@ vp() {
     sleep 0.3
 }
 
-# shot <name> [css-selector]  → public/docs/images/<name>.png
+# shot <name> [css-selector]  → public/images/docs/<name>.png
 shot() {
     local out="$IMG/$1.png"
     if [ -n "${2:-}" ]; then

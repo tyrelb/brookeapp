@@ -3,7 +3,7 @@
 /*
  * Builds one Markdown file from the guide's chapters for scripts/docs/build-pdf.sh.
  *
- *   php scripts/docs/concat.php [pages.json] > public/docs/.build/guide.md
+ *   php scripts/docs/concat.php [pages.json] > storage/app/docs-build/guide.md
  *
  * Emits a print stylesheet (make-pdf has no --css flag but passes <style> through), a
  * Contents page, then every chapter from resources/docs/manifest.php as an H1 (make-pdf
@@ -65,7 +65,7 @@ echo "</table>\n\n";
 
 foreach ($manifest as $chapter) {
     $body = file_get_contents($root.'/resources/docs/'.$chapter['file']);
-    $body = preg_replace('/\]\(\/docs\/images\/([^)\s]+)\)/', '](images/$1){width=full}', $body);
+    $body = preg_replace('/\]\(\/images\/docs\/([^)\s]+)\)/', '](images/$1){width=full}', $body);
 
     echo '# '.$chapter['title']."\n\n";
     if (! empty($chapter['admin'])) {

@@ -194,11 +194,11 @@ chapter_calendar() {
 
 # ─── Chapter 8: Client emails (rendered straight from the mailables) ───────────
 chapter_client_emails() {
-    mkdir -p public/docs/.build
+    mkdir -p storage/app/docs-build
     artisan_eval "require 'scripts/docs/render-emails.php';"
     vp 900x1150
     for name in invite receipt wallet-link; do
-        "$B" goto "file://$PWD/public/docs/.build/email-$name.html" >/dev/null
+        "$B" goto "file://$PWD/storage/app/docs-build/email-$name.html" >/dev/null
         sleep 0.8
         shot "email-$name"
     done

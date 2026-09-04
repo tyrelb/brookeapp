@@ -4,7 +4,7 @@ Reports turn the ledger into numbers you can act on: what you earned, what you r
 
 **Reports → Monthly report.** Use the arrows or the month picker to move between months.
 
-![The monthly report for August](/docs/images/report-monthly.png)
+![The monthly report for August](/images/docs/report-monthly.png)
 *August for the demo trainer.*
 
 - **The four cards**: sessions completed (with attendances), revenue before GST split into sessions and monthly fees, GST charged, and payments received net of refunds.
@@ -17,7 +17,7 @@ Reports turn the ledger into numbers you can act on: what you earned, what you r
 
 **Reports → Annual report.** Pick the tax year with the arrows.
 
-![The annual report for 2026](/docs/images/report-annual.png)
+![The annual report for 2026](/images/docs/report-annual.png)
 *One row per month with a total line. Every column is in the CSV.*
 
 The table has sessions, session revenue, monthly fees, revenue, GST charged, money received by each payment method, refunds, net received, prepaid credit held and amounts owing. **Export CSV** downloads the whole year for your accountant.
@@ -26,7 +26,7 @@ The table has sessions, session revenue, monthly fees, revenue, GST charged, mon
 
 **Reports → Gym usage** shows what you owe a gym for a month, laid out to match the invoice the gym sends you. Pick the gym (if you have more than one) and the month.
 
-![The gym usage report for August, in draft](/docs/images/report-gym-usage.png)
+![The gym usage report for August, in draft](/images/docs/report-gym-usage.png)
 *A draft month. Every session counts until you untick it.*
 
 - **The cards**: sessions counted, people trained, usage charges (with the monthly rate underneath) and the total owed including GST.
@@ -40,7 +40,7 @@ If some completed sessions have no gym, a notice offers to assign them to the se
 
 When the report matches the gym's invoice, click **Finalize**. The month is locked and a snapshot is stored, so later edits to sessions do not change what you agreed to pay.
 
-![The same month after Finalize](/docs/images/report-gym-usage-finalized.png)
+![The same month after Finalize](/images/docs/report-gym-usage-finalized.png)
 *A finalized month shows when it was locked. The checkboxes are disabled.*
 
 **Reopen** unlocks it if something needs to change. **CSV** downloads the detail table and **Print** gives a clean printable layout, useful to keep with the invoice.

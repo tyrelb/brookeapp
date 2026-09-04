@@ -4,13 +4,13 @@ Logging is for sessions that already happened. **Booking** is for the future: it
 
 Open **Calendar** in the sidebar. It opens on today in Day view; switch with the **Day / Week / Month** buttons and move with the arrows or **Today**.
 
-![Month view for September](/docs/images/calendar-month.png)
+![Month view for September](/images/docs/calendar-month.png)
 *Month view. Green is completed, purple is scheduled, grey is cancelled. The repeat symbol marks sessions from a repeating booking.*
 
-![Week view](/docs/images/calendar-week.png)
+![Week view](/images/docs/calendar-week.png)
 *Week view shows times and who is coming.*
 
-![Day view for one day](/docs/images/calendar-day.png)
+![Day view for one day](/images/docs/calendar-day.png)
 *Day view lists each session in full.*
 
 - Click a **session** to open it.
@@ -21,7 +21,7 @@ Open **Calendar** in the sidebar. It opens on today in Day view; switch with the
 
 Click **Book session** on the dashboard or the calendar.
 
-![The Book session form](/docs/images/book-session.png)
+![The Book session form](/images/docs/book-session.png)
 *The booking form is the logging form without the charging, plus repeat and invite options.*
 
 1. Set the **Service**, **Date**, **Start time** and **Duration**, and the **Gym** if you have more than one.
@@ -33,7 +33,7 @@ Click **Book session** on the dashboard or the calendar.
 
 For a standing appointment, tick **Repeat this booking** before you click Book.
 
-![The repeat section of the booking form](/docs/images/book-session-repeat.png)
+![The repeat section of the booking form](/images/docs/book-session-repeat.png)
 *Every week on Tuesday, Thursday and Saturday until December 18. The form counts the sessions it will create.*
 
 1. Choose how often: **Every week**, **Every 2 weeks** or **Every 4 weeks**.
@@ -45,7 +45,7 @@ For a standing appointment, tick **Repeat this booking** before you click Book.
 
 Open any scheduled session from the calendar or the Sessions list.
 
-![A scheduled session that belongs to a repeat](/docs/images/session-scheduled.png)
+![A scheduled session that belongs to a repeat](/images/docs/session-scheduled.png)
 *A scheduled session. The purple badge shows it belongs to a repeating booking with 12 sessions still to come.*
 
 - **Complete & charge** when the session has happened. Tick who attended first, exactly as on the logging form.
@@ -57,7 +57,7 @@ Open any scheduled session from the calendar or the Sessions list.
 
 ## Reschedule, and "this" versus "this and following"
 
-![The Reschedule dialog with the Apply to choice](/docs/images/reschedule-dialog.png)
+![The Reschedule dialog with the Apply to choice](/images/docs/reschedule-dialog.png)
 *For a session in a repeat, choose whether the change applies to just this date or to every later session too.*
 
 For a session that belongs to a repeat, Reschedule and Cancel both ask **Apply to**:
