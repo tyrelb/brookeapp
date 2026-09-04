@@ -1,5 +1,6 @@
 @import 'tailwindcss';
 @import '../../vendor/livewire/flux/dist/flux.css';
+@plugin "@tailwindcss/typography";
 
 @source "../views";
 @source '../../vendor/laravel/framework/src/Illuminate/Pagination/resources/views/*.blade.php';
@@ -66,3 +67,46 @@ select:focus[data-flux-control] {
 /* \[:where(&)\]:size-4 {
     @apply size-4;
 } */
+
+/* Documentation pages: Markdown chapters rendered through Str::markdown(). */
+.docs-prose {
+    @apply prose prose-zinc max-w-none dark:prose-invert;
+    @apply prose-headings:scroll-mt-24 prose-headings:font-semibold prose-h2:mt-10 prose-h2:text-xl prose-h3:mt-6 prose-h3:text-base;
+    @apply prose-a:text-accent-content prose-a:no-underline hover:prose-a:underline;
+    @apply prose-li:my-1 prose-table:text-sm prose-th:text-left;
+}
+
+.docs-prose img {
+    @apply my-3 w-full rounded-xl border border-zinc-200 shadow-sm dark:border-zinc-700;
+}
+
+/* An italic line straight after a screenshot is its caption. */
+.docs-prose img + em {
+    @apply -mt-1 mb-6 block text-center text-sm not-italic text-zinc-500 dark:text-zinc-400;
+}
+
+/* Blockquotes are used as Tip / Note / Important callouts. */
+.docs-prose blockquote {
+    @apply rounded-r-xl border-l-4 border-accent bg-accent/5 px-4 py-3 font-normal not-italic text-zinc-700 dark:bg-accent/10 dark:text-zinc-200;
+}
+
+.docs-prose blockquote p:first-of-type::before,
+.docs-prose blockquote p:last-of-type::after {
+    content: none;
+}
+
+.docs-prose kbd {
+    @apply rounded border border-zinc-300 bg-zinc-100 px-1.5 py-0.5 text-xs font-medium text-zinc-700 dark:border-zinc-600 dark:bg-zinc-800 dark:text-zinc-200;
+}
+
+@media print {
+    .docs-prose img {
+        @apply shadow-none;
+        break-inside: avoid;
+    }
+
+    .docs-prose h2,
+    .docs-prose h3 {
+        break-after: avoid;
+    }
+}

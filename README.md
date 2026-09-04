@@ -102,3 +102,13 @@ Trainers can set up to three **gyms** (Settings → Gyms), each with its own bil
 - **Phase 2** — scheduling calendar, booking emails with `.ics` invites, reschedule and cancellation updates, session receipts with remaining balance.
 - **Phase 3** — client magic-link Fitness Wallet page with balance, bookings and history, shareable from the client page and included in emails.
 - **Gym usage** — gyms with billing models and rate cards, sessions tagged by gym, monthly usage report with exclusions, finalize/reopen, CSV and print.
+
+## User guide
+
+Logged-in trainers get a **Documentation** entry in the user menu (bottom of the sidebar) that opens a step-by-step guide with screenshots, plus a **Download PDF** button. The guide is written for the trainer, not for developers.
+
+- Chapters are Markdown in `resources/docs/` and listed, in order, by `resources/docs/manifest.php`. They render in-app through `App\Support\UserGuide` at `/docs/{chapter}`; the `platform-admin` chapter is only shown to administrators.
+- Screenshots live in `public/docs/images/` and are captured from the seeded demo trainer by `scripts/docs/screenshots.sh`, which drives the [gstack](https://github.com/garrytan/gstack) headless browser against `https://brookeapp.test` (set `DOCS_BASE_URL` for another host). Run `php artisan migrate:fresh --seed` first; the script sends invites, reopens a session and finalizes a gym month as it goes, so only point it at the demo database.
+- The PDF at `resources/docs/BrookeApp-User-Guide.pdf` is built by `scripts/docs/build-pdf.sh` (gstack `make-pdf`: cover, table of contents, page numbers) and committed, then served behind login at `/docs/download`.
+
+After editing a chapter, rebuild the PDF and commit both. `tests/Feature/DocsTest.php` fails if a chapter refers to a screenshot that does not exist or if the PDF is missing.

@@ -1,5 +1,5 @@
 <div>
-    <x-page-header title="Plans &amp; pricing" subtitle="Each client is on one plan. Monthly plans include sessions; pay-as-you-go plans deduct per-person rates from the Fitness Wallet.">
+    <x-page-header title="Plans & pricing" subtitle="Each client is on one plan. Monthly plans include sessions; pay-as-you-go plans deduct per-person rates from the Fitness Wallet.">
         <x-slot:actions>
             <flux:button :href="route('services.index')" wire:navigate>Services</flux:button>
             <flux:button :href="route('plans.create')" icon="plus" variant="primary" wire:navigate>Add plan</flux:button>

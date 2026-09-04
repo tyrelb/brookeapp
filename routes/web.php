@@ -1,9 +1,11 @@
 <?php
 
+use App\Http\Controllers\DocsPdfController;
 use App\Http\Controllers\Portal\WalletController;
 use App\Livewire\Admin;
 use App\Livewire\Clients;
 use App\Livewire\Dashboard;
+use App\Livewire\Docs;
 use App\Livewire\Plans;
 use App\Livewire\Reports;
 use App\Livewire\Services;
@@ -62,6 +64,10 @@ Route::middleware(['auth', 'not-suspended'])->group(function () {
     Volt::route('settings/appearance', 'settings.appearance')->name('settings.appearance');
     Route::get('settings/business', Business::class)->name('settings.business');
     Route::get('settings/gyms', Gyms::class)->name('settings.gyms');
+
+    // User guide. The download route must be registered before the chapter wildcard.
+    Route::get('docs/download', DocsPdfController::class)->name('docs.pdf');
+    Route::get('docs/{chapter?}', Docs\Show::class)->name('docs.show');
 });
 
 require __DIR__.'/auth.php';

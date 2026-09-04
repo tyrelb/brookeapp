@@ -40,6 +40,7 @@ it('renders every main page for an authenticated trainer', function () {
         route('sessions.log'),
         route('sessions.show', $session),
         route('settings.business'),
+        route('docs.show'),
         route('reports.monthly'),
         route('reports.annual'),
     ] as $url) {
