@@ -11,31 +11,33 @@ use Livewire\Component;
 #[Title('Calendar')]
 class Calendar extends Component
 {
-    #[Url]
-    public string $date = ''; // any date inside the visible month / week
+    private const VIEWS = ['month', 'week', 'day'];
 
     #[Url]
-    public string $view = 'month'; // month | week
+    public string $date = ''; // any date inside the visible month / week, or the visible day itself
+
+    #[Url]
+    public string $view = 'month'; // month | week | day
 
     public function mount(): void
     {
-        if ($this->date === '' || ! strtotime($this->date)) {
-            $this->date = today()->toDateString();
-        }
+        $this->date = ($this->date !== '' && strtotime($this->date))
+            ? CarbonImmutable::parse($this->date)->toDateString()
+            : today()->toDateString();
 
-        if (! in_array($this->view, ['month', 'week'], true)) {
+        if (! in_array($this->view, self::VIEWS, true)) {
             $this->view = 'month';
         }
     }
 
     public function previous(): void
     {
-        $this->date = $this->anchor()->sub($this->view === 'month' ? '1 month' : '1 week')->toDateString();
+        $this->date = $this->anchor()->sub($this->step())->toDateString();
     }
 
     public function next(): void
     {
-        $this->date = $this->anchor()->add($this->view === 'month' ? '1 month' : '1 week')->toDateString();
+        $this->date = $this->anchor()->add($this->step())->toDateString();
     }
 
     public function today(): void
@@ -45,7 +47,27 @@ class Calendar extends Component
 
     public function setView(string $view): void
     {
-        $this->view = in_array($view, ['month', 'week'], true) ? $view : 'month';
+        $this->view = in_array($view, self::VIEWS, true) ? $view : 'month';
+    }
+
+    /** Jump to the day view for one date (from a day cell in the month or week view). */
+    public function showDay(string $date): void
+    {
+        if (! strtotime($date)) {
+            return;
+        }
+
+        $this->date = CarbonImmutable::parse($date)->toDateString();
+        $this->view = 'day';
+    }
+
+    private function step(): string
+    {
+        return match ($this->view) {
+            'day' => '1 day',
+            'week' => '1 week',
+            default => '1 month',
+        };
     }
 
     private function anchor(): CarbonImmutable
@@ -57,7 +79,10 @@ class Calendar extends Component
     {
         $anchor = $this->anchor();
 
-        if ($this->view === 'week') {
+        if ($this->view === 'day') {
+            $start = $end = $anchor;
+            $title = $anchor->format('l, F j, Y');
+        } elseif ($this->view === 'week') {
             $start = $anchor->startOfWeek(CarbonImmutable::MONDAY);
             $end = $start->addDays(6);
             $title = $start->format('M j').' – '.$end->format($start->month === $end->month ? 'j, Y' : 'M j, Y');
@@ -68,7 +93,7 @@ class Calendar extends Component
         }
 
         $sessions = TrainingSession::query()
-            ->with(['service', 'attendees.client'])
+            ->with(['service', 'gym', 'attendees.client'])
             ->whereBetween('starts_at', [$start->startOfDay(), $end->endOfDay()])
             ->orderBy('starts_at')
             ->get()

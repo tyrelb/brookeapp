@@ -194,6 +194,47 @@ it('shows the month and week calendar with only this trainer\'s sessions', funct
     $this->get(route('sessions.book', ['date' => '2026-09-20']))->assertOk()->assertSee('Book session');
 });
 
+it('shows a single day with every session on it and steps one day at a time', function () {
+    $early = TrainingSession::factory()->create(['user_id' => $this->trainer->id, 'service_id' => $this->service->id, 'starts_at' => '2026-09-15 07:00:00', 'duration_minutes' => 45]);
+    SessionAttendee::factory()->create(['training_session_id' => $early->id, 'client_id' => $this->ava->id]);
+    $late = TrainingSession::factory()->completed()->create(['user_id' => $this->trainer->id, 'service_id' => $this->service->id, 'starts_at' => '2026-09-15 18:30:00']);
+    SessionAttendee::factory()->create(['training_session_id' => $late->id, 'client_id' => $this->ben->id]);
+
+    $cara = Client::factory()->create(['user_id' => $this->trainer->id, 'first_name' => 'Cara', 'last_name' => 'Tomorrow']);
+    $nextDay = TrainingSession::factory()->create(['user_id' => $this->trainer->id, 'service_id' => $this->service->id, 'starts_at' => '2026-09-16 07:00:00']);
+    SessionAttendee::factory()->create(['training_session_id' => $nextDay->id, 'client_id' => $cara->id]);
+
+    Livewire::test(Calendar::class, ['date' => '2026-09-15', 'view' => 'day'])
+        ->assertSee('Tuesday, September 15, 2026')
+        ->assertSee('2 sessions')
+        ->assertSee('1 scheduled')
+        ->assertSee('1 completed')
+        ->assertSee('7:00 am – 7:45 am')
+        ->assertSee('6:30 pm – 7:30 pm')
+        ->assertSee('Ava Nguyen')
+        ->assertSee('Ben Okafor')
+        ->assertDontSee('Cara')
+        ->call('next')
+        ->assertSee('Wednesday, September 16, 2026')
+        ->assertSee('Cara Tomorrow')
+        ->assertDontSee('Ava Nguyen')
+        ->call('next')
+        ->assertSee('Thursday, September 17, 2026')
+        ->assertSee('No sessions on this day.')
+        ->call('previous')
+        ->call('previous')
+        ->assertSee('Tuesday, September 15, 2026');
+
+    Livewire::test(Calendar::class, ['date' => '2026-09-01'])
+        ->assertSee('September 2026')
+        ->call('showDay', '2026-09-15')
+        ->assertSet('view', 'day')
+        ->assertSet('date', '2026-09-15')
+        ->assertSee('Tuesday, September 15, 2026');
+
+    $this->get(route('sessions.calendar', ['view' => 'day', 'date' => '2026-09-15']))->assertOk()->assertSee('Tuesday, September 15, 2026');
+});
+
 it('saves notification defaults in business settings', function () {
     Livewire::test(Business::class)
         ->set('notify_on_booking', false)

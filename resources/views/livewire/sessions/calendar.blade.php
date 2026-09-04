@@ -9,6 +9,7 @@
             <flux:button.group>
                 <flux:button :variant="$view === 'month' ? 'primary' : 'outline'" wire:click="setView('month')">Month</flux:button>
                 <flux:button :variant="$view === 'week' ? 'primary' : 'outline'" wire:click="setView('week')">Week</flux:button>
+                <flux:button :variant="$view === 'day' ? 'primary' : 'outline'" wire:click="setView('day')">Day</flux:button>
             </flux:button.group>
             <flux:button :href="route('sessions.book', ['date' => $date])" icon="calendar" variant="primary" wire:navigate>Book session</flux:button>
         </x-slot:actions>
@@ -29,7 +30,7 @@
                         @php($key = $day->toDateString())
                         <div class="group min-h-28 border-r border-zinc-100 p-1.5 last:border-r-0 dark:border-zinc-800 {{ $day->month !== $month ? 'bg-zinc-50/60 dark:bg-zinc-950/40' : '' }}" wire:key="d-{{ $key }}">
                             <div class="flex items-center justify-between">
-                                <span class="inline-flex size-6 items-center justify-center rounded-full text-xs {{ $key === $today ? 'bg-[var(--color-accent)] font-semibold text-white' : ($day->month !== $month ? 'text-zinc-400' : 'text-zinc-700 dark:text-zinc-300') }}">{{ $day->day }}</span>
+                                <button type="button" wire:click="showDay('{{ $key }}')" title="See {{ $day->format('l, M j') }}" class="inline-flex size-6 items-center justify-center rounded-full text-xs hover:ring-2 hover:ring-[var(--color-accent)]/40 {{ $key === $today ? 'bg-[var(--color-accent)] font-semibold text-white' : ($day->month !== $month ? 'text-zinc-400' : 'text-zinc-700 dark:text-zinc-300') }}">{{ $day->day }}</button>
                                 <a href="{{ route('sessions.book', ['date' => $key]) }}" wire:navigate class="rounded p-0.5 text-zinc-400 opacity-0 hover:text-[var(--color-accent)] group-hover:opacity-100" title="Book on {{ $day->format('M j') }}">
                                     <flux:icon.plus class="size-4" />
                                 </a>
@@ -53,13 +54,13 @@
                 </div>
             @endforeach
         </div>
-    @else
+    @elseif ($view === 'week')
         <div class="grid gap-3 lg:grid-cols-7">
             @foreach ($days as $day)
                 @php($key = $day->toDateString())
                 <div class="rounded-xl border border-zinc-200 bg-white p-3 dark:border-zinc-700 dark:bg-zinc-900 {{ $key === $today ? 'ring-2 ring-[var(--color-accent)]/40' : '' }}" wire:key="w-{{ $key }}">
                     <div class="flex items-center justify-between">
-                        <div class="text-sm font-medium">{{ $day->format('D') }} <span class="text-zinc-500">{{ $day->format('M j') }}</span></div>
+                        <button type="button" wire:click="showDay('{{ $key }}')" title="See {{ $day->format('l, M j') }}" class="text-left text-sm font-medium hover:text-[var(--color-accent)]">{{ $day->format('D') }} <span class="text-zinc-500">{{ $day->format('M j') }}</span></button>
                         <a href="{{ route('sessions.book', ['date' => $key]) }}" wire:navigate class="text-zinc-400 hover:text-[var(--color-accent)]" title="Book"><flux:icon.plus class="size-4" /></a>
                     </div>
                     <div class="mt-2 space-y-2">
@@ -79,12 +80,63 @@
                 </div>
             @endforeach
         </div>
+    @else
+        @php($key = $days[0]->toDateString())
+        @php($daySessions = $sessions->get($key, collect()))
+        @php($byStatus = $daySessions->countBy(fn ($s) => $s->status->value))
+        <div class="rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900 {{ $key === $today ? 'ring-2 ring-[var(--color-accent)]/40' : '' }}">
+            <div class="flex flex-wrap items-center justify-between gap-2 border-b border-zinc-200 px-4 py-3 dark:border-zinc-700">
+                <div class="flex items-center gap-2 text-sm">
+                    <span class="font-medium">{{ $days[0]->format('l') }}</span>
+                    <span class="text-zinc-500">{{ $days[0]->format('M j') }}</span>
+                    @if ($key === $today)
+                        <flux:badge size="sm" color="purple">Today</flux:badge>
+                    @endif
+                </div>
+                <div class="text-xs text-zinc-500">
+                    {{ $daySessions->count() }} {{ Str::plural('session', $daySessions->count()) }}
+                    @foreach (['scheduled', 'completed', 'cancelled'] as $status)
+                        @if ($byStatus->get($status))
+                            · {{ $byStatus->get($status) }} {{ $status }}
+                        @endif
+                    @endforeach
+                </div>
+            </div>
+            <div class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                @forelse ($daySessions as $session)
+                    <a href="{{ route('sessions.show', $session) }}" wire:navigate wire:key="ds-{{ $session->id }}"
+                       class="flex items-start gap-4 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 {{ $session->isCancelled() ? 'opacity-60' : '' }}">
+                        <div class="w-40 shrink-0 text-sm">
+                            <div class="font-semibold {{ $session->isCancelled() ? 'line-through' : '' }}">{{ $session->starts_at->format('g:i a') }} – {{ $session->endsAt()->format('g:i a') }}</div>
+                            <div class="text-xs text-zinc-500">{{ $session->duration_minutes }} min</div>
+                        </div>
+                        <div class="min-w-0 flex-1">
+                            <div class="flex flex-wrap items-center gap-x-2 text-sm">
+                                <span class="font-medium {{ $session->isCancelled() ? 'line-through' : '' }}">{{ $session->service->name }}</span>
+                                @if ($session->isInSeries())<span class="text-zinc-400" title="Repeats">↻</span>@endif
+                                @if ($session->gym)<span class="text-xs text-zinc-500">· {{ $session->gym->name }}</span>@endif
+                            </div>
+                            <div class="mt-0.5 text-sm text-zinc-600 dark:text-zinc-300">{{ $session->attendees->pluck('client.full_name')->join(', ') ?: 'No attendees yet' }}</div>
+                            @if ($session->notes)
+                                <div class="mt-1 truncate text-xs text-zinc-500">{{ $session->notes }}</div>
+                            @endif
+                        </div>
+                        <flux:badge size="sm" :color="$session->status->color()">{{ $session->status->label() }}</flux:badge>
+                    </a>
+                @empty
+                    <div class="px-4 py-10 text-center text-sm text-zinc-500">
+                        No sessions on this day.
+                        <a href="{{ route('sessions.book', ['date' => $key]) }}" wire:navigate class="font-medium text-[var(--color-accent)] hover:underline">Book one</a>
+                    </div>
+                @endforelse
+            </div>
+        </div>
     @endif
 
     <div class="flex flex-wrap gap-4 text-xs text-zinc-500">
         <span><span class="inline-block size-2.5 rounded-sm bg-[var(--color-accent)]/30 align-middle"></span> Scheduled</span>
         <span><span class="inline-block size-2.5 rounded-sm bg-green-200 align-middle"></span> Completed</span>
         <span><span class="inline-block size-2.5 rounded-sm bg-zinc-200 align-middle"></span> Cancelled</span>
-        <span>Click a session to open it, or the + on a day to book.</span>
+        <span>Click a session to open it, a date to see that whole day, or the + on a day to book.</span>
     </div>
 </div>
