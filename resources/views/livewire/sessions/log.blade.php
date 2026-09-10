@@ -28,12 +28,32 @@
                     @endforeach
                 </flux:select>
             </div>
-            <flux:input wire:model="date" label="Date" type="date" />
-            <flux:input wire:model="time" label="Start time" type="time" />
-            <flux:input wire:model="duration_minutes" label="Duration (min)" type="number" min="5" max="480" />
+            <flux:input wire:model.live="date" label="Date" type="date" />
+            <flux:input wire:model.live="time" label="Start time" type="time" />
+            <flux:input wire:model.live.debounce.500ms="duration_minutes" label="Duration (min)" type="number" min="5" max="480" />
             <div class="sm:col-span-2 lg:col-span-3">
                 <flux:input wire:model="notes" label="Notes" placeholder="Optional" />
             </div>
+
+            @if ($conflicts->isNotEmpty())
+                <div class="sm:col-span-2 lg:col-span-4">
+                    <flux:callout variant="warning" icon="exclamation-triangle">
+                        <flux:callout.heading>{{ $conflicts->count() === 1 ? 'Something else is booked at this time' : 'Other sessions are booked at this time' }}</flux:callout.heading>
+                        <flux:callout.text>
+                            <ul class="space-y-1">
+                                @foreach ($conflicts as $clash)
+                                    <li wire:key="clash-{{ $clash->id }}">
+                                        <flux:link :href="route('sessions.show', $clash)" wire:navigate>{{ $clash->starts_at->format('g:i a') }} – {{ $clash->endsAt()->format('g:i a') }}</flux:link>
+                                        · {{ $clash->service->name }}
+                                        · {{ $clash->attendees->pluck('client.full_name')->join(', ') ?: 'no attendees' }}
+                                    </li>
+                                @endforeach
+                            </ul>
+                            <span class="mt-1 block">You can {{ $isBooking ? 'book' : 'log' }} this anyway — pick another time if it was a mistake.</span>
+                        </flux:callout.text>
+                    </flux:callout>
+                </div>
+            @endif
         </section>
 
         <section class="grid gap-6 lg:grid-cols-5">
@@ -150,6 +170,11 @@
                             @endif
                         </div>
                     </div>
+                    @if ($repeatConflicts > 0)
+                        <flux:callout variant="warning" icon="exclamation-triangle" class="mt-4">
+                            <flux:callout.text>{{ $repeatConflicts }} of these {{ Str::plural('date', $repeatConflicts) }} already {{ $repeatConflicts === 1 ? 'has' : 'have' }} a session at this time. They will be booked on top of it.</flux:callout.text>
+                        </flux:callout>
+                    @endif
                     @error('until') <flux:error name="until">{{ $message }}</flux:error> @enderror
                     @error('weekdays') <flux:error name="weekdays">{{ $message }}</flux:error> @enderror
                 @endif
@@ -166,7 +191,7 @@
 
         <div class="flex flex-wrap items-center gap-3">
             @if ($isBooking)
-                <flux:button type="submit" variant="primary" icon="calendar">{{ $repeat && $repeatPreview && ! $repeatPreview['error'] ? 'Book '.$repeatPreview['count'].' '.Str::plural('session', $repeatPreview['count']) : 'Book session' }}</flux:button>
+                <flux:button type="submit" variant="primary" icon="calendar">{{ ($repeat && $repeatPreview && ! $repeatPreview['error'] ? 'Book '.$repeatPreview['count'].' '.Str::plural('session', $repeatPreview['count']) : 'Book session').($conflicts->isNotEmpty() || $repeatConflicts > 0 ? ' anyway' : '') }}</flux:button>
                 <flux:button :href="route('sessions.calendar', ['date' => $date])" variant="ghost" wire:navigate>Cancel</flux:button>
             @else
                 <flux:button type="submit" variant="primary" icon="check">Complete &amp; charge</flux:button>

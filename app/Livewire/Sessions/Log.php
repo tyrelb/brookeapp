@@ -15,8 +15,10 @@ use App\Models\Gym;
 use App\Models\Service;
 use App\Models\TrainingSession;
 use App\Support\Recurrence;
+use App\Support\SessionConflicts;
 use Carbon\Carbon;
 use Flux\Flux;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -135,6 +137,39 @@ class Log extends Component
         } catch (BillingException $e) {
             return ['count' => 0, 'last' => null, 'description' => '', 'error' => $e->getMessage()];
         }
+    }
+
+    /**
+     * Sessions already in the diary that overlap the slot being filled in.
+     * A warning only — the trainer decides whether the clash is real.
+     *
+     * @return Collection<int, TrainingSession>
+     */
+    public function conflicts(): Collection
+    {
+        if (! strtotime($this->date) || ! preg_match('/^([01]\\d|2[0-3]):[0-5]\\d$/', $this->time)) {
+            return TrainingSession::query()->whereRaw('1 = 0')->get();
+        }
+
+        return SessionConflicts::at("{$this->date} {$this->time}", (int) $this->duration_minutes);
+    }
+
+    /** How many dates in a repeat land on top of an existing session. */
+    public function repeatConflictCount(): int
+    {
+        if (! $this->isBooking() || ! $this->repeat) {
+            return 0;
+        }
+
+        try {
+            $dates = Recurrence::occurrences($this->date ?: today(), $this->until ?: today(), array_map('intval', $this->weekdays), (int) $this->intervalWeeks);
+        } catch (BillingException) {
+            return 0;
+        }
+
+        $slots = array_map(fn ($date) => $date->format('Y-m-d')." {$this->time}", $dates);
+
+        return count(SessionConflicts::forSlots($slots, (int) $this->duration_minutes));
     }
 
     public function updatedServiceId(): void
@@ -288,6 +323,8 @@ class Log extends Component
             'selected' => $selected,
             'preview' => $this->previewCharges($service, $selected),
             'repeatPreview' => $this->isBooking() && $this->repeat ? $this->repeatPreview() : null,
+            'conflicts' => $this->conflicts(),
+            'repeatConflicts' => $this->repeatConflictCount(),
             'intervals' => Recurrence::INTERVALS,
             'weekdayNames' => Recurrence::WEEKDAYS,
         ])->title($this->isBooking() ? 'Book session' : 'Log session');

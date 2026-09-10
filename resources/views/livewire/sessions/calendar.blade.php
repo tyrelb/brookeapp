@@ -17,6 +17,12 @@
 
     @php($today = today()->toDateString())
 
+    @if ($conflictCount > 0)
+        <flux:callout variant="warning" icon="exclamation-triangle">
+            <flux:callout.text>{{ $conflictCount }} {{ Str::plural('session', $conflictCount) }} in this view {{ $conflictCount === 1 ? 'overlaps' : 'overlap' }} another booking. Overlaps are marked ⚠ — open one to reschedule or cancel it.</flux:callout.text>
+        </flux:callout>
+    @endif
+
     @if ($view === 'month')
         <div class="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
             <div class="grid min-w-[840px] grid-cols-7 border-b border-zinc-200 text-xs font-medium text-zinc-500 dark:border-zinc-700">
@@ -42,8 +48,9 @@
                                            'completed' => 'bg-green-50 text-green-800 dark:bg-green-900/40 dark:text-green-200',
                                            'cancelled' => 'bg-zinc-100 text-zinc-500 line-through dark:bg-zinc-800',
                                            default => 'bg-[var(--color-accent)]/10 text-[var(--color-accent-content)] dark:text-zinc-100',
-                                       } }}"
-                                       title="{{ $session->service->name }} · {{ $session->attendees->pluck('client.full_name')->join(', ') }}">
+                                       } }} {{ isset($conflicts[$session->id]) ? 'ring-1 ring-amber-400 dark:ring-amber-500' : '' }}"
+                                       title="{{ $session->service->name }} · {{ $session->attendees->pluck('client.full_name')->join(', ') }}{{ isset($conflicts[$session->id]) ? ' · overlaps another session' : '' }}">
+                                        @if (isset($conflicts[$session->id]))<span class="text-amber-600 dark:text-amber-400" title="Overlaps another session">⚠</span>@endif
                                         <span class="font-medium">{{ $session->starts_at->format('g:i') }}</span>@if ($session->isInSeries())<span title="Repeats">↻</span>@endif
                                         {{ $session->attendees->pluck('client.first_name')->join(', ') ?: $session->service->name }}
                                     </a>
@@ -65,9 +72,9 @@
                     </div>
                     <div class="mt-2 space-y-2">
                         @forelse ($sessions->get($key, collect()) as $session)
-                            <a href="{{ route('sessions.show', $session) }}" wire:navigate wire:key="ws-{{ $session->id }}" class="block rounded-lg border border-zinc-200 p-2 text-xs hover:border-[var(--color-accent)] dark:border-zinc-700 {{ $session->isCancelled() ? 'opacity-60 line-through' : '' }}">
+                            <a href="{{ route('sessions.show', $session) }}" wire:navigate wire:key="ws-{{ $session->id }}" class="block rounded-lg border p-2 text-xs hover:border-[var(--color-accent)] {{ isset($conflicts[$session->id]) ? 'border-amber-400 bg-amber-50/60 dark:border-amber-500 dark:bg-amber-900/20' : 'border-zinc-200 dark:border-zinc-700' }} {{ $session->isCancelled() ? 'opacity-60 line-through' : '' }}">
                                 <div class="flex items-center justify-between">
-                                    <span class="font-semibold">{{ $session->starts_at->format('g:i a') }}</span>
+                                    <span class="font-semibold whitespace-nowrap">@if (isset($conflicts[$session->id]))<span class="text-amber-600 dark:text-amber-400" title="Overlaps another session">⚠</span> @endif{{ $session->starts_at->format('g:i a') }}</span>
                                     <flux:badge size="sm" :color="$session->status->color()">{{ $session->status->label() }}</flux:badge>
                                 </div>
                                 <div class="mt-0.5 text-zinc-600 dark:text-zinc-300">{{ $session->service->name }}</div>
@@ -105,10 +112,13 @@
             <div class="divide-y divide-zinc-100 dark:divide-zinc-800">
                 @forelse ($daySessions as $session)
                     <a href="{{ route('sessions.show', $session) }}" wire:navigate wire:key="ds-{{ $session->id }}"
-                       class="flex items-start gap-4 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 {{ $session->isCancelled() ? 'opacity-60' : '' }}">
+                       class="flex items-start gap-4 px-4 py-3 hover:bg-zinc-50 dark:hover:bg-zinc-800/60 {{ isset($conflicts[$session->id]) ? 'border-l-4 border-amber-400 bg-amber-50/50 dark:border-amber-500 dark:bg-amber-900/10' : '' }} {{ $session->isCancelled() ? 'opacity-60' : '' }}">
                         <div class="w-40 shrink-0 text-sm">
                             <div class="font-semibold {{ $session->isCancelled() ? 'line-through' : '' }}">{{ $session->starts_at->format('g:i a') }} – {{ $session->endsAt()->format('g:i a') }}</div>
                             <div class="text-xs text-zinc-500">{{ $session->duration_minutes }} min</div>
+                            @if (isset($conflicts[$session->id]))
+                                <div class="mt-1 text-xs font-medium text-amber-700 dark:text-amber-400">⚠ Overlaps another session</div>
+                            @endif
                         </div>
                         <div class="min-w-0 flex-1">
                             <div class="flex flex-wrap items-center gap-x-2 text-sm">
@@ -137,6 +147,7 @@
         <span><span class="inline-block size-2.5 rounded-sm bg-[var(--color-accent)]/30 align-middle"></span> Scheduled</span>
         <span><span class="inline-block size-2.5 rounded-sm bg-green-200 align-middle"></span> Completed</span>
         <span><span class="inline-block size-2.5 rounded-sm bg-zinc-200 align-middle"></span> Cancelled</span>
+        <span><span class="text-amber-600 dark:text-amber-400">⚠</span> Overlapping bookings</span>
         <span>Click a session to open it, a date to see that whole day, or the + on a day to book.</span>
     </div>
 </div>

@@ -3,6 +3,7 @@
 namespace App\Livewire\Sessions;
 
 use App\Models\TrainingSession;
+use App\Support\SessionConflicts;
 use Carbon\CarbonImmutable;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
@@ -92,11 +93,18 @@ class Calendar extends Component
             $title = $anchor->format('F Y');
         }
 
-        $sessions = TrainingSession::query()
+        // A day either side of the visible range so a session that runs late still
+        // clashes with the one it overlaps into.
+        $loaded = TrainingSession::query()
             ->with(['service', 'gym', 'attendees.client'])
-            ->whereBetween('starts_at', [$start->startOfDay(), $end->endOfDay()])
+            ->whereBetween('starts_at', [$start->subDay()->startOfDay(), $end->addDay()->endOfDay()])
             ->orderBy('starts_at')
-            ->get()
+            ->get();
+
+        $conflicts = SessionConflicts::within($loaded);
+
+        $sessions = $loaded
+            ->filter(fn (TrainingSession $s) => $s->starts_at->between($start->startOfDay(), $end->endOfDay()))
             ->groupBy(fn (TrainingSession $s) => $s->starts_at->toDateString());
 
         $days = [];
@@ -108,6 +116,8 @@ class Calendar extends Component
             'title' => $title,
             'days' => $days,
             'sessions' => $sessions,
+            'conflicts' => $conflicts,
+            'conflictCount' => count(array_intersect_key($conflicts, $sessions->flatten()->keyBy('id')->all())),
             'month' => $anchor->month,
             'weeks' => array_chunk($days, 7),
         ]);
