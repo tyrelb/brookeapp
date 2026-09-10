@@ -13,17 +13,20 @@ use App\Actions\SendSessionReceipts;
 use App\Enums\SessionStatus;
 use App\Exceptions\BillingException;
 use App\Livewire\Sessions\Concerns\PreviewsCharges;
+use App\Livewire\Sessions\Concerns\SelectsMembers;
 use App\Models\Client;
 use App\Models\Gym;
 use App\Models\Service;
+use App\Models\SessionAttendee;
 use App\Models\TrainingSession;
 use Flux\Flux;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
 
 class Show extends Component
 {
-    use PreviewsCharges;
+    use PreviewsCharges, SelectsMembers;
 
     public TrainingSession $trainingSession;
 
@@ -31,7 +34,7 @@ class Show extends Component
 
     public string $clientSearch = '';
 
-    /** @var array<int, array{attended: bool, override: string}> keyed by client id */
+    /** @var array<int, array{attended: bool, override: string, members: array<int, array{attended: bool, override: string}>}> keyed by client id */
     public array $attendees = [];
 
     public bool $sendReceipts = false;
@@ -63,12 +66,48 @@ class Show extends Component
     {
         $this->attendees = [];
 
-        foreach ($this->trainingSession->attendees()->get() as $attendee) {
+        foreach ($this->trainingSession->attendees()->with('client.activeMembers', 'members')->get() as $attendee) {
             $this->attendees[$attendee->client_id] = [
                 'attended' => $attendee->attended,
                 'override' => $attendee->price_override !== null ? number_format((float) $attendee->price_override, 2, '.', '') : '',
+                'members' => $this->memberStateFor($attendee),
             ];
         }
+    }
+
+    /**
+     * Every member currently on the family, plus anyone already on this session — so a
+     * member added last week shows up on a session booked last month.
+     *
+     * @return array<int, array{attended: bool, override: string}>
+     */
+    private function memberStateFor(SessionAttendee $attendee): array
+    {
+        if (! $attendee->client?->isOnFamilyPlan()) {
+            return [];
+        }
+
+        $saved = $attendee->members->keyBy('family_member_id');
+        $state = [];
+
+        foreach ($attendee->client->activeMembers as $member) {
+            $state[$member->id] = [
+                'attended' => (bool) ($saved[$member->id]->attended ?? false),
+                'override' => isset($saved[$member->id]) && $saved[$member->id]->price_override !== null
+                    ? number_format((float) $saved[$member->id]->price_override, 2, '.', '')
+                    : '',
+            ];
+        }
+
+        // Members deactivated since the session was booked stay put if they are on it.
+        foreach ($saved as $memberId => $row) {
+            $state[$memberId] ??= [
+                'attended' => (bool) $row->attended,
+                'override' => $row->price_override !== null ? number_format((float) $row->price_override, 2, '.', '') : '',
+            ];
+        }
+
+        return $state;
     }
 
     private function syncScheduleFromModel(): void
@@ -88,14 +127,32 @@ class Show extends Component
             return;
         }
 
-        $client = Client::query()->find($clientId);
+        $client = Client::query()->with('activeMembers')->find($clientId);
 
         if (! $client || isset($this->attendees[$clientId])) {
             return;
         }
 
-        $this->trainingSession->attendees()->create(['client_id' => $clientId, 'attended' => true]);
-        $this->attendees[$clientId] = ['attended' => true, 'override' => ''];
+        DB::transaction(function () use ($client, $clientId) {
+            $attendee = $this->trainingSession->attendees()->create([
+                'client_id' => $clientId,
+                // A family only counts once the trainer says who is coming.
+                'attended' => ! $client->isOnFamilyPlan(),
+            ]);
+
+            if ($client->isOnFamilyPlan()) {
+                $attendee->setRelation('client', $client);
+                $attendee->syncMembers($client->activeMembers->mapWithKeys(
+                    fn ($member) => [$member->id => ['attended' => false, 'price_override' => null]]
+                )->all());
+            }
+        });
+
+        $this->attendees[$clientId] = [
+            'attended' => ! $client->isOnFamilyPlan(),
+            'override' => '',
+            'members' => $client->activeMembers->mapWithKeys(fn ($m) => [$m->id => ['attended' => false, 'override' => '']])->all(),
+        ];
         $this->clientSearch = '';
     }
 
@@ -125,17 +182,39 @@ class Show extends Component
         $this->validate([
             'attendees.*.attended' => ['boolean'],
             'attendees.*.override' => ['nullable', 'numeric', 'min:0', 'max:100000'],
+            'attendees.*.members' => ['array', 'max:'.Client::MAX_MEMBERS],
+            'attendees.*.members.*.attended' => ['boolean'],
+            'attendees.*.members.*.override' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'notes' => ['nullable', 'string', 'max:2000'],
         ]);
 
-        foreach ($this->attendees as $clientId => $state) {
-            $this->trainingSession->attendees()->where('client_id', $clientId)->update([
-                'attended' => (bool) $state['attended'],
-                'price_override' => ($state['override'] ?? '') !== '' ? round((float) $state['override'], 2) : null,
-            ]);
-        }
+        $rows = $this->trainingSession->attendees()->with('client.members')->get()->keyBy('client_id');
 
-        $this->trainingSession->update(['notes' => $this->notes ?: null]);
+        DB::transaction(function () use ($rows) {
+            foreach ($this->attendees as $clientId => $state) {
+                $attendee = $rows->get((int) $clientId);
+
+                if (! $attendee) {
+                    continue;
+                }
+
+                $isFamily = $attendee->client?->isOnFamilyPlan() ?? false;
+
+                $attendee->update([
+                    'attended' => $isFamily ? $attendee->attended : (bool) $state['attended'],
+                    'price_override' => ! $isFamily && ($state['override'] ?? '') !== ''
+                        ? round((float) $state['override'], 2)
+                        : null,
+                ]);
+
+                if ($isFamily) {
+                    // syncMembers settles `attended` from the ticks themselves.
+                    $attendee->syncMembers($this->memberSelection($state));
+                }
+            }
+
+            $this->trainingSession->update(['notes' => $this->notes ?: null]);
+        });
     }
 
     public function complete(): void

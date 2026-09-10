@@ -23,7 +23,7 @@ class ApplyAttendeesToFollowing
             return 0;
         }
 
-        $template = $anchor->attendees()->get()->keyBy('client_id');
+        $template = $anchor->attendees()->with('members')->get()->keyBy('client_id');
         $following = $series->scheduledFrom($anchor)->reject(fn (TrainingSession $s) => $s->is($anchor));
         $newlyInvited = []; // client id => sessions
 
@@ -34,13 +34,28 @@ class ApplyAttendeesToFollowing
                 $session->attendees()->whereNotIn('client_id', $template->keys())->delete();
 
                 foreach ($template as $clientId => $attendee) {
+                    $members = $attendee->members
+                        ->mapWithKeys(fn ($member) => [$member->family_member_id => [
+                            'attended' => (bool) $member->attended,
+                            'price_override' => $member->price_override !== null ? (float) $member->price_override : null,
+                        ]])
+                        ->all();
+
                     if ($existing->has($clientId)) {
                         $existing[$clientId]->update(['price_override' => $attendee->price_override]);
+
+                        if ($members !== []) {
+                            $existing[$clientId]->syncMembers($members);
+                        }
 
                         continue;
                     }
 
-                    $session->attendees()->create(['client_id' => $clientId, 'attended' => true, 'price_override' => $attendee->price_override]);
+                    $copy = $session->attendees()->create(['client_id' => $clientId, 'attended' => true, 'price_override' => $attendee->price_override]);
+
+                    if ($members !== []) {
+                        $copy->syncMembers($members);
+                    }
 
                     if ($session->invitesWereSent()) {
                         $newlyInvited[$clientId][] = $session->id;

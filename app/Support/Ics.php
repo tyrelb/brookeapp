@@ -57,7 +57,7 @@ class Ics
         $description = collect([
             $summary,
             $session->starts_at->format('l, F j, Y \a\t g:i a').' ('.$session->duration_minutes.' min)',
-            $session->attendees->count() > 1 ? 'Attending: '.$session->attendees->pluck('client.full_name')->join(', ') : null,
+            $session->headcount() > 1 ? 'Attending: '.implode(', ', $session->peopleNames()) : null,
             '',
             'To change or cancel this session please contact '.$trainer->displayName().' directly.',
             $trainer->booking_instructions,

@@ -299,7 +299,7 @@ class Show extends Component
 
     public function render()
     {
-        $this->client->load(['plan', 'gym']);
+        $this->client->load(['plan', 'gym', 'activeMembers']);
 
         return view('livewire.clients.show', [
             'balance' => $this->client->balance(),

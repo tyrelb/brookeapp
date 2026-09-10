@@ -77,7 +77,7 @@
                 <div class="flex items-center justify-between">
                     <flux:heading>Attendees</flux:heading>
                     @if ($preview['rows'])
-                        <flux:badge>{{ $preview['tier'] }} session · {{ $preview['headcount'] }} {{ Str::plural('person', $preview['headcount']) }}</flux:badge>
+                        <flux:badge>{{ $preview['tier'] }} session · {{ $preview['people'] }} {{ Str::plural('person', $preview['people']) }}@if ($preview['tier'] !== $preview['rateTier']) · {{ $preview['rateTier'] }} rate @endif</flux:badge>
                     @endif
                 </div>
 
@@ -105,15 +105,22 @@
                             </thead>
                             <tbody>
                                 @foreach ($preview['rows'] as $clientId => $row)
+                                    @php($isFamily = $row['client']->isOnFamilyPlan())
                                     <tr class="border-t border-zinc-100 dark:border-zinc-800" wire:key="att-{{ $clientId }}">
                                         <td class="px-3 py-2">
                                             <div class="font-medium">{{ $row['client']->full_name }}</div>
-                                            <div class="text-xs text-zinc-500">{{ $row['client']->plan?->name ?? 'No plan' }}{{ $isBooking ? ' · '.($row['client']->email ?: 'no email') : '' }}</div>
+                                            <div class="text-xs text-zinc-500">
+                                                {{ $row['client']->plan?->name ?? 'No plan' }}{{ $isBooking ? ' · '.($row['client']->email ?: 'no email') : '' }}
+                                                @if ($isFamily)
+                                                    · {{ $row['people'] }} of {{ count($attendees[$clientId]['members'] ?? []) }} attending
+                                                    <button type="button" class="ml-1 underline decoration-dotted underline-offset-2" wire:click="toggleAllMembers({{ $clientId }}, {{ $row['people'] ? 'false' : 'true' }})">{{ $row['people'] ? 'clear' : 'select all' }}</button>
+                                                @endif
+                                            </div>
                                         </td>
                                         @unless ($isBooking)
-                                            <td class="px-3 py-2"><flux:checkbox wire:model.live="attendees.{{ $clientId }}.attended" /></td>
+                                            <td class="px-3 py-2">@unless ($isFamily)<flux:checkbox wire:model.live="attendees.{{ $clientId }}.attended" />@endunless</td>
                                         @endunless
-                                        <td class="px-3 py-2"><flux:input wire:model.live.debounce.400ms="attendees.{{ $clientId }}.override" type="number" step="0.01" min="0" placeholder="Plan rate" class="w-28" /></td>
+                                        <td class="px-3 py-2">@unless ($isFamily)<flux:input wire:model.live.debounce.400ms="attendees.{{ $clientId }}.override" type="number" step="0.01" min="0" placeholder="Plan rate" class="w-28" />@endunless</td>
                                         <td class="px-3 py-2 text-right tabular-nums">
                                             @if (! $row['attended'])
                                                 <span class="text-zinc-400">No-show</span>
@@ -128,6 +135,21 @@
                                         </td>
                                         <td class="px-3 py-2 text-right"><flux:button size="xs" variant="ghost" icon="x-mark" wire:click="removeClient({{ $clientId }})" /></td>
                                     </tr>
+                                    @if ($isFamily)
+                                        @foreach ($attendees[$clientId]['members'] ?? [] as $memberId => $member)
+                                            @php($charge = collect($row['members'])->firstWhere('id', (int) $memberId))
+                                            @php($memberName = $row['client']->members->firstWhere('id', (int) $memberId)?->name ?? 'Member')
+                                            <tr class="bg-zinc-50/60 text-xs dark:bg-zinc-800/40" wire:key="att-{{ $clientId }}-m-{{ $memberId }}">
+                                                <td class="py-1.5 pl-8 pr-3">
+                                                    <flux:checkbox wire:model.live="attendees.{{ $clientId }}.members.{{ $memberId }}.attended" :label="$memberName" />
+                                                </td>
+                                                @unless ($isBooking)<td></td>@endunless
+                                                <td class="px-3 py-1.5"><flux:input wire:model.live.debounce.400ms="attendees.{{ $clientId }}.members.{{ $memberId }}.override" type="number" step="0.01" min="0" placeholder="Plan rate" class="w-28" size="sm" /></td>
+                                                <td class="px-3 py-1.5 text-right tabular-nums text-zinc-500">{{ $charge ? money($charge['subtotal']) : '—' }}</td>
+                                                <td></td>
+                                            </tr>
+                                        @endforeach
+                                    @endif
                                 @endforeach
                             </tbody>
                             <tfoot>

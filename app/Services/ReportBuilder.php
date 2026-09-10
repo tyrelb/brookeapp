@@ -86,7 +86,7 @@ class ReportBuilder
         $sessions = TrainingSession::query()->forTrainer($trainer)
             ->where('status', SessionStatus::Completed->value)
             ->whereBetween('starts_at', [$from->startOfDay(), $to->endOfDay()])
-            ->with(['service', 'attendees'])
+            ->with(['service', 'attendees.client.plan', 'attendees.members'])
             ->get();
 
         $byService = [];

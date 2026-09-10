@@ -50,19 +50,22 @@ class Dashboard extends Component
     }
 
     /**
-     * Pay-as-you-go clients whose balance no longer covers one single session.
+     * Pay-as-you-go clients whose balance no longer covers their next session — which for
+     * a family means one fare per member, not one fare.
      */
     private function lowWallets(): Collection
     {
         $gstRate = auth()->user()->effectiveGstRate();
 
         return Client::query()->active()->withBalance()
-            ->whereHas('plan', fn ($q) => $q->where('type', PlanType::Wallet->value))
-            ->with('plan.rates')
+            ->whereHas('plan', fn ($q) => $q->whereIn('type', [PlanType::Wallet->value, PlanType::Family->value]))
+            ->with('plan.rates', 'activeMembers')
             ->get()
             ->filter(function (Client $client) use ($gstRate) {
-                $single = $client->plan->rates->where('headcount', 1)->min('unit_price');
-                $threshold = $single === null ? 0.0 : GstCalculator::totalWithGst((float) $single, $gstRate);
+                $people = max(1, $client->isOnFamilyPlan() ? $client->activeMembers->count() : 1);
+                $rate = $client->plan->rateFor($client->plan->rates->first()?->service_id ?? 0, $people);
+                $unit = $rate?->unit_price ?? $client->plan->rates->where('headcount', 1)->min('unit_price');
+                $threshold = $unit === null ? 0.0 : GstCalculator::totalWithGst((float) $unit * $people, $gstRate);
 
                 return (float) $client->balance < $threshold;
             })

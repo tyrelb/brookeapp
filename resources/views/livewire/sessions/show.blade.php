@@ -44,7 +44,7 @@
             <div class="lg:col-span-3">
                 <div class="flex items-center justify-between">
                     <flux:heading>Attendees</flux:heading>
-                    <flux:badge>{{ $preview['tier'] }} · {{ $preview['headcount'] }} {{ Str::plural('person', $preview['headcount']) }}</flux:badge>
+                    <flux:badge>{{ $preview['tier'] }} · {{ $preview['people'] }} {{ Str::plural('person', $preview['people']) }}@if ($preview['tier'] !== $preview['rateTier']) · {{ $preview['rateTier'] }} rate @endif</flux:badge>
                 </div>
                 <div class="mt-2 overflow-x-auto rounded-lg border border-zinc-200 dark:border-zinc-700">
                     <table class="w-full text-sm">
@@ -60,13 +60,20 @@
                         <tbody>
                             @forelse ($preview['rows'] as $clientId => $row)
                                 @php($attendee = $session->attendees->firstWhere('client_id', $clientId))
+                                @php($isFamily = $row['client']->isOnFamilyPlan())
                                 <tr class="border-t border-zinc-100 dark:border-zinc-800" wire:key="att-{{ $clientId }}">
                                     <td class="px-3 py-2">
                                         <flux:link :href="route('clients.show', $row['client'])" wire:navigate>{{ $row['client']->full_name }}</flux:link>
-                                        <div class="text-xs text-zinc-500">{{ $row['client']->plan?->name ?? 'No plan' }}@if ($attendee?->invite_sent_at) · invited {{ $attendee->invite_sent_at->format('M j') }}@elseif (! $row['client']->email) · no email @endif</div>
+                                        <div class="text-xs text-zinc-500">
+                                            {{ $row['client']->plan?->name ?? 'No plan' }}@if ($attendee?->invite_sent_at) · invited {{ $attendee->invite_sent_at->format('M j') }}@elseif (! $row['client']->email) · no email @endif
+                                            @if ($isFamily)
+                                                · {{ $row['people'] }} of {{ count($attendees[$clientId]['members'] ?? []) }} attending
+                                                <button type="button" class="ml-1 underline decoration-dotted underline-offset-2" wire:click="toggleAllMembers({{ $clientId }}, {{ $row['people'] ? 'false' : 'true' }})">{{ $row['people'] ? 'clear' : 'select all' }}</button>
+                                            @endif
+                                        </div>
                                     </td>
-                                    <td class="px-3 py-2"><flux:checkbox wire:model.live="attendees.{{ $clientId }}.attended" /></td>
-                                    <td class="px-3 py-2"><flux:input wire:model.live.debounce.400ms="attendees.{{ $clientId }}.override" type="number" step="0.01" min="0" placeholder="Plan rate" class="w-28" /></td>
+                                    <td class="px-3 py-2">@unless ($isFamily)<flux:checkbox wire:model.live="attendees.{{ $clientId }}.attended" />@endunless</td>
+                                    <td class="px-3 py-2">@unless ($isFamily)<flux:input wire:model.live.debounce.400ms="attendees.{{ $clientId }}.override" type="number" step="0.01" min="0" placeholder="Plan rate" class="w-28" />@endunless</td>
                                     <td class="px-3 py-2 text-right tabular-nums">
                                         @if (! $row['attended']) <span class="text-zinc-400">No-show</span>
                                         @elseif ($row['error']) <span class="text-xs text-red-600 dark:text-red-400">{{ $row['error'] }}</span>
@@ -76,6 +83,19 @@
                                     </td>
                                     <td class="px-3 py-2 text-right"><flux:button size="xs" variant="ghost" icon="x-mark" wire:click="removeClient({{ $clientId }})" /></td>
                                 </tr>
+                                @if ($isFamily)
+                                    @foreach ($attendees[$clientId]['members'] ?? [] as $memberId => $member)
+                                        @php($charge = collect($row['members'])->firstWhere('id', (int) $memberId))
+                                        @php($memberName = $row['client']->members->firstWhere('id', (int) $memberId)?->name ?? 'Member')
+                                        <tr class="bg-zinc-50/60 text-xs dark:bg-zinc-800/40" wire:key="att-{{ $clientId }}-m-{{ $memberId }}">
+                                            <td class="py-1.5 pl-8 pr-3"><flux:checkbox wire:model.live="attendees.{{ $clientId }}.members.{{ $memberId }}.attended" :label="$memberName" /></td>
+                                            <td></td>
+                                            <td class="px-3 py-1.5"><flux:input wire:model.live.debounce.400ms="attendees.{{ $clientId }}.members.{{ $memberId }}.override" type="number" step="0.01" min="0" placeholder="Plan rate" class="w-28" size="sm" /></td>
+                                            <td class="px-3 py-1.5 text-right tabular-nums text-zinc-500">{{ $charge ? money($charge['subtotal']) : '—' }}</td>
+                                            <td></td>
+                                        </tr>
+                                    @endforeach
+                                @endif
                             @empty
                                 <tr><td colspan="5" class="px-3 py-4 text-sm text-zinc-500">No clients added yet.</td></tr>
                             @endforelse
@@ -179,6 +199,17 @@
                             </flux:table.cell>
                             <flux:table.cell class="text-xs">{{ $attendee->receipt_sent_at ? 'Sent '.$attendee->receipt_sent_at->format('M j') : ($attendee->client->email ? '' : 'No email') }}</flux:table.cell>
                         </flux:table.row>
+                        @foreach ($attendee->members->where('attended', true) as $member)
+                            <flux:table.row :key="'m-'.$member->id">
+                                <flux:table.cell class="pl-8 text-xs text-zinc-500">{{ $member->member_name }}</flux:table.cell>
+                                <flux:table.cell></flux:table.cell>
+                                <flux:table.cell class="text-xs text-zinc-500">Yes</flux:table.cell>
+                                <flux:table.cell align="end" class="text-xs text-zinc-500">{{ $session->isCompleted() ? money($member->subtotal) : '' }}</flux:table.cell>
+                                <flux:table.cell></flux:table.cell>
+                                <flux:table.cell></flux:table.cell>
+                                <flux:table.cell></flux:table.cell>
+                            </flux:table.row>
+                        @endforeach
                     @endforeach
                 </flux:table.rows>
             </flux:table>

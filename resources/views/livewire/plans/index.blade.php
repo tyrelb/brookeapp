@@ -18,7 +18,7 @@
                         <div>
                             <flux:heading>{{ $plan->name }}</flux:heading>
                             <div class="mt-1 flex flex-wrap items-center gap-1">
-                                <flux:badge size="sm" :color="$plan->isMonthly() ? 'purple' : 'teal'">{{ $plan->isMonthly() ? 'Monthly' : 'Pay-as-you-go' }}</flux:badge>
+                                <flux:badge size="sm" :color="$plan->isMonthly() ? 'purple' : ($plan->isFamily() ? 'amber' : 'teal')">{{ $plan->isMonthly() ? 'Monthly' : ($plan->isFamily() ? 'Family' : 'Pay-as-you-go') }}</flux:badge>
                                 @unless ($plan->active)
                                     <flux:badge size="sm" color="zinc">Inactive</flux:badge>
                                 @endunless

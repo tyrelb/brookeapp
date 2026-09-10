@@ -38,9 +38,11 @@ You are logged out and cannot log in, and your clients' wallet links stop workin
 | Term | Meaning |
 |---|---|
 | **Fitness Wallet** | A client's prepaid balance. Deposits go in; each session takes its share plus GST out. |
-| **Plan** | How a client pays: pay-as-you-go with a rate grid, or a monthly membership with a flat fee. |
+| **Plan** | How a client pays: pay-as-you-go with a rate grid, a family plan sharing one wallet, or a monthly membership with a flat fee. |
+| **Family plan** | One client record for a household, with up to ten named members on a single Fitness Wallet. Each member who attends a session is charged for it. |
+| **Member** | One person inside a family client. Members are names only: they share the household's email, wallet link and balance. |
 | **Service** | Something you offer, such as a 60-minute personal training session, with a default length. |
-| **Tier** | The group size used to pick the rate: Single (1), Partner (2), Triple (3) or Quad (4). |
+| **Tier** | The group size used to pick the rate: Single (1), Partner (2), Triple (3) or Quad (4). Larger groups are named by their size and pay the Quad rate. |
 | **Rate grid** | A plan's price per person for each service at each tier, before GST. |
 | **Log** | Record a session that has already happened and charge for it. |
 | **Book** | Put a future session on the calendar, optionally with calendar invites. |

@@ -50,7 +50,7 @@ class Log extends Component
 
     public string $clientSearch = '';
 
-    /** @var array<int, array{attended: bool, override: string}> keyed by client id */
+    /** @var array<int, array{attended: bool, override: string, members: array<int, array{attended: bool, override: string}>}> keyed by client id */
     public array $attendees = [];
 
     public bool $sendInvites = true;
@@ -193,6 +193,9 @@ class Log extends Component
             'attendees' => ['required', 'array', 'min:1'],
             'attendees.*.attended' => ['boolean'],
             'attendees.*.override' => ['nullable', 'numeric', 'min:0', 'max:100000'],
+            'attendees.*.members' => ['array', 'max:'.Client::MAX_MEMBERS],
+            'attendees.*.members.*.attended' => ['boolean'],
+            'attendees.*.members.*.override' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'repeat' => ['boolean'],
             'until' => [Rule::requiredIf($this->isBooking() && $this->repeat), 'nullable', 'date', 'after_or_equal:date'],
             'intervalWeeks' => [Rule::in(['1', '2', '4'])],
@@ -207,12 +210,22 @@ class Log extends Component
             'attendees.min' => 'Add at least one client.',
         ]);
 
-        $clientIds = Client::query()->whereIn('id', array_keys($this->attendees))->pluck('id')->all();
+        $clients = Client::query()->with('plan', 'members')->whereIn('id', array_keys($this->attendees))->get()->keyBy('id');
 
-        if (count($clientIds) !== count($this->attendees)) {
+        if ($clients->count() !== count($this->attendees)) {
             $this->addError('attendees', 'One of the selected clients could not be found.');
 
             return;
+        }
+
+        foreach ($this->attendees as $clientId => $state) {
+            $client = $clients[$clientId];
+
+            if ($client->isOnFamilyPlan() && ! $this->stateAttends($client, $state)) {
+                $this->addError('attendees', "Tick which {$client->full_name} members are attending.");
+
+                return;
+            }
         }
 
         if ($this->isBooking() && $this->repeat && ! $complete) {
@@ -222,7 +235,7 @@ class Log extends Component
         }
 
         try {
-            $session = DB::transaction(function () use ($complete) {
+            $session = DB::transaction(function () use ($complete, $clients) {
                 $session = TrainingSession::create([
                     'service_id' => (int) $this->service_id,
                     'gym_id' => $this->gym_id !== '' ? (int) $this->gym_id : null,
@@ -233,11 +246,20 @@ class Log extends Component
                 ]);
 
                 foreach ($this->attendees as $clientId => $state) {
-                    $session->attendees()->create([
+                    $client = $clients[$clientId];
+
+                    $attendee = $session->attendees()->create([
                         'client_id' => $clientId,
-                        'attended' => (bool) $state['attended'],
-                        'price_override' => ($state['override'] ?? '') !== '' ? round((float) $state['override'], 2) : null,
+                        'attended' => $this->stateAttends($client, $state),
+                        'price_override' => ! $client->isOnFamilyPlan() && ($state['override'] ?? '') !== ''
+                            ? round((float) $state['override'], 2)
+                            : null,
                     ]);
+
+                    if ($client->isOnFamilyPlan()) {
+                        $attendee->setRelation('client', $client);
+                        $attendee->syncMembers($this->memberSelection($state));
+                    }
                 }
 
                 if ($complete) {
@@ -272,7 +294,10 @@ class Log extends Component
     {
         $attendees = [];
         foreach ($this->attendees as $clientId => $state) {
-            $attendees[$clientId] = ['price_override' => ($state['override'] ?? '') !== '' ? round((float) $state['override'], 2) : null];
+            $attendees[$clientId] = [
+                'price_override' => ($state['override'] ?? '') !== '' ? round((float) $state['override'], 2) : null,
+                'members' => $this->memberSelection($state),
+            ];
         }
 
         try {
@@ -313,7 +338,7 @@ class Log extends Component
 
     public function render()
     {
-        $selected = Client::query()->with('plan.rates')->whereIn('id', array_keys($this->attendees))->get()->keyBy('id');
+        $selected = Client::query()->with('plan.rates', 'members')->whereIn('id', array_keys($this->attendees))->get()->keyBy('id');
         $service = Service::query()->find((int) $this->service_id);
 
         return view('livewire.sessions.log', [

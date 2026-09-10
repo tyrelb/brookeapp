@@ -9,22 +9,32 @@ use Illuminate\Database\Eloquent\Collection;
 /**
  * The "add clients to this session" list shared by the log and bulk-log screens.
  *
- * @property array<int, array{attended: bool, override: string}> $attendees keyed by client id
+ * A family client is added as one row with its members listed underneath, none of them
+ * ticked. The default has to fail closed: pre-ticking everyone would charge for people
+ * who never showed up, while forgetting to tick anyone is caught before the charge.
+ *
+ * @property array<int, array{attended: bool, override: string, members: array<int, array{attended: bool, override: string}>}> $attendees keyed by client id
  * @property string $clientSearch
  * @property string $gym_id
  * @property bool $gymChosen
  */
 trait PicksAttendees
 {
+    use SelectsMembers;
+
     public function addClient(int $clientId): void
     {
-        $client = Client::query()->find($clientId);
+        $client = Client::query()->with('activeMembers')->find($clientId);
 
         if (! $client || isset($this->attendees[$clientId])) {
             return;
         }
 
-        $this->attendees[$clientId] = ['attended' => true, 'override' => ''];
+        $this->attendees[$clientId] = [
+            'attended' => ! $client->isOnFamilyPlan(),
+            'override' => '',
+            'members' => $this->blankMemberState($client),
+        ];
         $this->clientSearch = '';
 
         // The first client's usual gym wins unless the trainer already chose one.
@@ -46,7 +56,7 @@ trait PicksAttendees
     /** @return Collection<int, Client> */
     protected function candidateClients()
     {
-        return Client::query()->active()->with('plan')
+        return Client::query()->active()->with('plan', 'activeMembers')
             ->whereNotIn('id', array_keys($this->attendees))
             ->search($this->clientSearch)
             ->orderBy('first_name')->orderBy('last_name')

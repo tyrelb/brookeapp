@@ -1,12 +1,15 @@
 <x-mail::message>
 # Thanks for training today
 
-Hi {{ $client->first_name }},
+Hi {{ $client->isOnFamilyPlan() ? 'there' : $client->first_name }},
 
 Here's a summary of your session with {{ $trainer->displayName() }}.
 
 <x-mail::panel>
 **{{ $session->service->name }}** ({{ $tier }})<br>
+@if ($members->isNotEmpty())
+Attending: {{ $members->pluck('member_name')->join(', ') }}<br>
+@endif
 {{ $session->starts_at->format('l, F j, Y') }} at {{ $session->starts_at->format('g:i a') }}
 </x-mail::panel>
 
@@ -14,7 +17,13 @@ Here's a summary of your session with {{ $trainer->displayName() }}.
 <x-mail::table>
 | | |
 |:--|--:|
-| Session ({{ $tier }} rate) | {{ money($attendee->subtotal) }} |
+@if ($members->isNotEmpty())
+@foreach ($members as $member)
+| {{ $member->member_name }} ({{ $rateTier }} rate) | {{ money($member->subtotal) }} |
+@endforeach
+@else
+| Session ({{ $rateTier }} rate) | {{ money($attendee->subtotal) }} |
+@endif
 @if ((float) $attendee->gst_amount > 0)
 | GST | {{ money($attendee->gst_amount) }} |
 @endif

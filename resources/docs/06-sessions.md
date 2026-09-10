@@ -14,15 +14,16 @@ Click **Log session** on the dashboard, the Sessions page, or a client's page.
 ![The form with two attendees and the charge preview](/images/docs/log-session-partner.png)
 *Two attendees make it a Partner session. Each person is charged the partner rate from their own plan, plus GST.*
 
-4. The badge above the table shows the **tier** ("Partner session · 2 people"). Each attendee row shows what they will be charged, worked out from *their* plan, so two people on different plans pay different amounts for the same hour.
+4. The badge above the table shows the **tier** ("Partner session · 2 people"). Groups of five or more are named by their size and billed at the Quad rate. Each attendee row shows what they will be charged, worked out from *their* plan, so two people on different plans pay different amounts for the same hour.
 5. Untick **Attended** for a no-show. They stay on the record but are not charged, and the tier drops to match the people who did come.
-6. Use **Price override** to charge someone a different before-GST amount just this once, for example a trial rate. The preview updates as you type.
+6. **A family client** adds one row with its members listed underneath. Tick the ones who came; **select all** ticks the lot. The tier counts people, not rows, so two Barnes members and one other client make it a Triple session for all three, and the family's wallet is charged twice at the triple rate. A family with nobody ticked is not charged, and the form asks you to pick someone before it will complete.
+7. Use **Price override** to charge someone a different before-GST amount just this once, for example a trial rate. Family members have their own override each, so one child can be priced differently without touching the rest. The preview updates as you type.
 
 ![The form with a price override on one attendee](/images/docs/log-session-override.png)
 *A one-off override for Ava. Ben is still on his plan rate.*
 
-7. Tick **Email attendees a receipt** if you want each person to get a summary and their remaining balance. The default comes from Settings → Business.
-8. Click **Complete & charge**. The charges are posted and you are taken to the session page.
+8. Tick **Email attendees a receipt** if you want each person to get a summary and their remaining balance. The default comes from Settings → Business. A family gets one email, listing who trained and what each of them cost.
+9. Click **Complete & charge**. The charges are posted and you are taken to the session page.
 
 > **Tip:** **Save as scheduled** stores the session without charging anyone. Use it for a session that is still in the future, or if you want to finish the attendance list later.
 

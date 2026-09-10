@@ -15,7 +15,7 @@ class ReopenTrainingSession
     public function handle(TrainingSession $session): TrainingSession
     {
         return DB::transaction(function () use ($session) {
-            $session->loadMissing('attendees.walletTransaction');
+            $session->loadMissing('attendees.walletTransaction', 'attendees.members');
 
             foreach ($session->attendees as $attendee) {
                 $attendee->walletTransaction?->update(['voided_at' => now()]);
@@ -26,6 +26,10 @@ class ReopenTrainingSession
                     'total' => 0,
                     'wallet_transaction_id' => null,
                 ]);
+
+                // Who attended and any per-member prices survive: correcting attendance
+                // is the whole point of reopening. Only the money is cleared.
+                $attendee->members()->update(['subtotal' => 0]);
             }
 
             $session->update([

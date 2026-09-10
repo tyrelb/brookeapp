@@ -14,7 +14,11 @@ class Plan extends Model
     /** @use HasFactory<PlanFactory> */
     use BelongsToTrainer, HasFactory;
 
+    /** Rate tiers a plan can price: Single, Partner, Triple, Quad. */
     public const MAX_HEADCOUNT = 4;
+
+    /** People who can be in one session — a family can bring more than there are tiers. */
+    public const MAX_PEOPLE = 10;
 
     protected $fillable = [
         'user_id',
@@ -56,6 +60,17 @@ class Plan extends Model
         return $this->type === PlanType::Wallet;
     }
 
+    public function isFamily(): bool
+    {
+        return $this->type === PlanType::Family;
+    }
+
+    /** Deposits money and is charged per session — pay-as-you-go or family. */
+    public function usesWallet(): bool
+    {
+        return $this->type->chargesPerSession();
+    }
+
     /**
      * Find the per-person rate for a service at a given headcount.
      * Falls back to the largest headcount tier at or below the requested one.
@@ -72,7 +87,8 @@ class Plan extends Model
     }
 
     /**
-     * Human label for a headcount tier.
+     * How many people were in the room. Beyond the four named tiers it just counts,
+     * because "Quad" is a lie about a session of six.
      */
     public static function headcountLabel(int $headcount): string
     {
@@ -80,7 +96,17 @@ class Plan extends Model
             $headcount <= 1 => 'Single',
             $headcount === 2 => 'Partner',
             $headcount === 3 => 'Triple',
-            default => 'Quad',
+            $headcount === 4 => 'Quad',
+            default => "{$headcount} people",
         };
+    }
+
+    /**
+     * Which rate tier a group of this size is billed at. Groups larger than the
+     * tiers go on paying the Quad rate, per rateFor()'s fallback.
+     */
+    public static function rateTierLabel(int $headcount): string
+    {
+        return self::headcountLabel(min(max(1, $headcount), self::MAX_HEADCOUNT));
     }
 }

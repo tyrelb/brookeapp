@@ -43,7 +43,7 @@ class BulkLog extends Component
 
     public string $clientSearch = '';
 
-    /** @var array<int, array{attended: bool, override: string}> keyed by client id */
+    /** @var array<int, array{attended: bool, override: string, members: array<int, array{attended: bool, override: string}>}> keyed by client id */
     public array $attendees = [];
 
     public bool $sendReceipts = false;
@@ -167,6 +167,9 @@ class BulkLog extends Component
             'attendees' => ['required', 'array', 'min:1'],
             'attendees.*.attended' => ['boolean'],
             'attendees.*.override' => ['nullable', 'numeric', 'min:0', 'max:100000'],
+            'attendees.*.members' => ['array', 'max:'.Client::MAX_MEMBERS],
+            'attendees.*.members.*.attended' => ['boolean'],
+            'attendees.*.members.*.override' => ['nullable', 'numeric', 'min:0', 'max:100000'],
         ], [
             'gym_id.required' => 'Pick the gym these sessions are at so they show on the gym usage report.',
             'dates.required' => 'Pick at least one date.',
@@ -176,9 +179,9 @@ class BulkLog extends Component
             'attendees.min' => 'Add at least one client.',
         ]);
 
-        $clientIds = Client::query()->whereIn('id', array_keys($this->attendees))->pluck('id')->all();
+        $clients = Client::query()->with('plan', 'members')->whereIn('id', array_keys($this->attendees))->get()->keyBy('id');
 
-        if (count($clientIds) !== count($this->attendees)) {
+        if ($clients->count() !== count($this->attendees)) {
             $this->addError('attendees', 'One of the selected clients could not be found.');
 
             return;
@@ -186,9 +189,20 @@ class BulkLog extends Component
 
         $attendees = [];
         foreach ($this->attendees as $clientId => $state) {
+            $client = $clients[$clientId];
+
+            if ($client->isOnFamilyPlan() && ! $this->stateAttends($client, $state)) {
+                $this->addError('attendees', "Tick which {$client->full_name} members are attending.");
+
+                return;
+            }
+
             $attendees[(int) $clientId] = [
-                'attended' => (bool) $state['attended'],
-                'price_override' => ($state['override'] ?? '') !== '' ? round((float) $state['override'], 2) : null,
+                'attended' => $this->stateAttends($client, $state),
+                'price_override' => ! $client->isOnFamilyPlan() && ($state['override'] ?? '') !== ''
+                    ? round((float) $state['override'], 2)
+                    : null,
+                'members' => $this->memberSelection($state),
             ];
         }
 
@@ -243,7 +257,7 @@ class BulkLog extends Component
 
     public function render()
     {
-        $selected = Client::query()->with('plan.rates')->whereIn('id', array_keys($this->attendees))->get()->keyBy('id');
+        $selected = Client::query()->with('plan.rates', 'members')->whereIn('id', array_keys($this->attendees))->get()->keyBy('id');
         $preview = $this->previewCharges(Service::query()->find((int) $this->service_id), $selected);
 
         $anchor = CarbonImmutable::parse($this->monthAnchor ?: today());

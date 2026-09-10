@@ -25,7 +25,7 @@ class WalletController extends Controller
     public function show(Request $request, string $token): View
     {
         $client = Client::withoutGlobalScope(TrainerScope::class)
-            ->with(['plan.rates', 'trainer'])
+            ->with(['plan.rates', 'trainer', 'activeMembers'])
             ->where('portal_token', $token)
             ->firstOrFail();
 
@@ -36,8 +36,12 @@ class WalletController extends Controller
 
         $singleRate = null;
         if ($client->isOnWalletPlan()) {
-            $price = $client->plan->rates->where('headcount', 1)->min('unit_price');
-            $singleRate = $price !== null ? GstCalculator::totalWithGst((float) $price, $trainer->effectiveGstRate()) : null;
+            // A family's session costs one fare per member, so price the whole household —
+            // otherwise the estimate overstates their runway several times over.
+            $people = max(1, $client->isOnFamilyPlan() ? $client->activeMembers()->count() : 1);
+            $price = $client->plan->rates->where('headcount', '<=', $people)->sortByDesc('headcount')->first()?->unit_price
+                ?? $client->plan->rates->where('headcount', 1)->min('unit_price');
+            $singleRate = $price !== null ? GstCalculator::totalWithGst((float) $price * $people, $trainer->effectiveGstRate()) : null;
         }
 
         $base = [

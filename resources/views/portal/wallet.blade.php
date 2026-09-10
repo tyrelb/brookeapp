@@ -13,7 +13,7 @@
                     @if ($balance < 0)
                         Your wallet is overdrawn; please top up before your next session.
                     @elseif ($singleRate)
-                        Prepaid credit, GST included · about {{ floor($balance / $singleRate) }} single {{ Str::plural('session', (int) floor($balance / $singleRate)) }} left.
+                        Prepaid credit, GST included · about {{ floor($balance / $singleRate) }} {{ $client->isOnFamilyPlan() ? 'family' : 'single' }} {{ Str::plural('session', (int) floor($balance / $singleRate)) }} left.
                     @else
                         Prepaid credit, GST included.
                     @endif

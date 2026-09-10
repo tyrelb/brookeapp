@@ -7,7 +7,7 @@ Reports turn the ledger into numbers you can act on: what you earned, what you r
 ![The monthly report for August](/images/docs/report-monthly.png)
 *August for the demo trainer.*
 
-- **The four cards**: sessions completed (with attendances), revenue before GST split into sessions and monthly fees, GST charged, and payments received net of refunds.
+- **The four cards**: sessions completed (with attendances), revenue before GST split into sessions and monthly fees, GST charged, and payments received net of refunds. Attendances count people, so a family of three that trained together counts as three.
 - **Sessions by service** groups completed sessions by service and tier. Revenue here counts pay-as-you-go charges only; members' sessions are included in their fee.
 - **Money received** is the cash basis: payments dated in this month, by method, with the GST portion of that money worked out at 5/105.
 - **GST summary** shows both bases side by side. *Accrual* is the GST on what you charged. *Cash* is the GST embedded in what you actually received. Prepaid wallet deposits make the two differ, because money arrives before the sessions it pays for. Ask your accountant which basis to remit on; both are tracked.
@@ -29,7 +29,7 @@ The table has sessions, session revenue, monthly fees, revenue, GST charged, mon
 ![The gym usage report for August, in draft](/images/docs/report-gym-usage.png)
 *A draft month. Every session counts until you untick it.*
 
-- **The cards**: sessions counted, people trained, usage charges (with the monthly rate underneath) and the total owed including GST.
+- **The cards**: sessions counted, people trained, usage charges (with the monthly rate underneath) and the total owed including GST. Family members count individually here too, because the gym charges by how many bodies were in the room.
 - **Summary by group size** shows how many sessions of each size and the rate for each, using the gym's rate card from Settings.
 - **Amount owed** adds the usage charges, monthly rate and GST.
 - **Detail** lists every completed session at that gym with its date, time, group size and charge. **Untick** a row to exclude a session the gym should not charge for; the totals update immediately.

@@ -35,8 +35,20 @@ Click **Add plan** and leave **Pay-as-you-go (Fitness Wallet)** selected.
 
 1. Give the plan a **name** clients will recognise, such as "Standard pay-as-you-go".
 2. Fill in the **Session rates**. Each cell is the price *per person, before GST* when that many people train together: Single (1), Partner (2), Triple (3) or Quad (4). Partner rates are usually lower per person because two people share the hour.
-3. Leave a cell blank if you do not offer that size. A blank tier falls back to the next lower one, so a triple with no rate charges the partner rate.
+3. Leave a cell blank if you do not offer that size. A blank tier falls back to the next lower one, so a triple with no rate charges the partner rate. Groups of five or more pay the Quad rate for the same reason.
 4. Add a **Description** if you like, and click **Create plan**.
+
+### A family plan
+
+Click **Add plan** and choose **Family (one shared Fitness Wallet)**. It is priced exactly like a pay-as-you-go plan, with the same rate grid, but a client on it is a household rather than one person: you list the family's members once, and each session charges for the ones who turned up.
+
+The Barnes family might have Mom, Dad and three children on one wallet. If three of them come to a session, the wallet is charged three times the rate for a group of three. If only one comes, it is charged once at the single rate. Nobody has their own balance to top up.
+
+1. Name it something like "Family pay-as-you-go".
+2. Fill in the **Session rates** as usual. They are per person: a family of four training together pays four times the Quad rate.
+3. Click **Create plan**, then add the household as a client and list its members. See **Families** in the Clients chapter.
+
+> **Note:** Family members are names, not clients. They share the household's email address, wallet link and balance, and they never appear in the client list on their own.
 
 ### A monthly membership plan
 

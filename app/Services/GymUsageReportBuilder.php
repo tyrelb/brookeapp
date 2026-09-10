@@ -27,7 +27,7 @@ class GymUsageReportBuilder
             ->where('gym_id', $gym->id)
             ->where('status', SessionStatus::Completed->value)
             ->whereBetween('starts_at', [$from, $to])
-            ->with(['service', 'attendees.client'])
+            ->with(['service', 'attendees.client.plan', 'attendees.members'])
             ->orderBy('starts_at')
             ->get();
 
@@ -38,7 +38,7 @@ class GymUsageReportBuilder
         $excluded = 0;
 
         foreach ($sessions as $session) {
-            $count = $session->attendees->where('attended', true)->count();
+            $count = $session->headcount();
             $rate = $gym->rateFor($count);
             $billable = (bool) $session->gym_billable;
 
@@ -47,7 +47,7 @@ class GymUsageReportBuilder
                 'date' => $session->starts_at->toDateString(),
                 'time' => $session->starts_at->format('H:i'),
                 'service' => $session->service->name,
-                'attendees' => $session->attendees->where('attended', true)->pluck('client.full_name')->values()->all(),
+                'attendees' => $session->peopleNames(),
                 'people' => $count,
                 'rate' => $rate,
                 'billable' => $billable,

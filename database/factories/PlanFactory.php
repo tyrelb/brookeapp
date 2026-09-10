@@ -35,6 +35,16 @@ class PlanFactory extends Factory
         ]);
     }
 
+    public function family(): static
+    {
+        return $this->state(fn () => [
+            'name' => 'Family pay-as-you-go',
+            'type' => PlanType::Family,
+            'monthly_fee' => null,
+            'billing_day' => null,
+        ]);
+    }
+
     public function wallet(): static
     {
         return $this->state(fn () => [

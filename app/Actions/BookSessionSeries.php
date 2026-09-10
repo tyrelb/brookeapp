@@ -53,11 +53,16 @@ class BookSessionSeries
                 ]);
 
                 foreach ($attendees as $clientId => $state) {
-                    $session->attendees()->create([
+                    $attendee = $session->attendees()->create([
                         'client_id' => $clientId,
                         'attended' => true,
                         'price_override' => $state['price_override'] ?? null,
                     ]);
+
+                    // A family repeats with the members the trainer picked, not the whole household.
+                    if (($state['members'] ?? []) !== []) {
+                        $attendee->syncMembers($state['members']);
+                    }
                 }
             }
 

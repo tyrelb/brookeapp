@@ -3,7 +3,7 @@
         <x-slot:subtitle>
             @if ($client->plan)
                 {{ $client->plan->name }}
-                <flux:badge size="sm" class="ml-1" :color="$client->plan->isMonthly() ? 'purple' : 'teal'">{{ $client->plan->isMonthly() ? 'Monthly' : 'Fitness Wallet' }}</flux:badge>
+                <flux:badge size="sm" class="ml-1" :color="$client->plan->isMonthly() ? 'purple' : 'teal'">{{ $client->plan->isMonthly() ? 'Monthly' : ($client->plan->isFamily() ? 'Family wallet' : 'Fitness Wallet') }}</flux:badge>
             @else
                 No plan assigned
             @endif
@@ -41,6 +41,21 @@
                 <div class="mt-1 text-xs text-zinc-500">Usually trains at {{ $client->gym->name }}</div>
             @endif
         </div>
+        @if ($client->isOnFamilyPlan())
+            <div class="rounded-xl border border-zinc-200 bg-white p-5 text-sm dark:border-zinc-700 dark:bg-zinc-900">
+                <div class="flex items-center justify-between">
+                    <span class="text-zinc-500 dark:text-zinc-400">Family members</span>
+                    <flux:link :href="route('clients.edit', $client)" wire:navigate class="text-xs">Edit</flux:link>
+                </div>
+                @forelse ($client->activeMembers as $member)
+                    <div class="mt-1">{{ $member->name }}</div>
+                @empty
+                    <div class="mt-1 text-zinc-500">Nobody added yet — <flux:link :href="route('clients.edit', $client)" wire:navigate>add the family</flux:link> before logging a session.</div>
+                @endforelse
+                <div class="mt-2 text-xs text-zinc-500">One wallet between them. Each member who attends is charged for that session.</div>
+            </div>
+        @endif
+
         <div class="rounded-xl border border-zinc-200 bg-white p-5 text-sm dark:border-zinc-700 dark:bg-zinc-900">
             <div class="text-zinc-500 dark:text-zinc-400">Notes</div>
             <div class="mt-1 whitespace-pre-line">{{ $client->notes ?: '—' }}</div>
@@ -135,7 +150,12 @@
                         <flux:table.row :key="$attendance->id">
                             <flux:table.cell><flux:link :href="route('sessions.show', $session)" wire:navigate>{{ $session->starts_at->format('D M j, Y g:i a') }}</flux:link></flux:table.cell>
                             <flux:table.cell>{{ $session->service->name }}</flux:table.cell>
-                            <flux:table.cell>{{ \App\Models\Plan::headcountLabel($session->headcount()) }} ({{ $session->headcount() }})</flux:table.cell>
+                            <flux:table.cell>
+                                {{ \App\Models\Plan::headcountLabel($session->headcount()) }} ({{ $session->headcount() }})
+                                @if ($attendance->members->where('attended', true)->isNotEmpty())
+                                    <div class="text-xs text-zinc-500">{{ $attendance->members->where('attended', true)->pluck('member_name')->join(', ') }}</div>
+                                @endif
+                            </flux:table.cell>
                             <flux:table.cell>
                                 @if (! $attendance->attended)
                                     <flux:badge size="sm" color="zinc">No-show</flux:badge>

@@ -97,11 +97,25 @@ class TrainingSession extends Model
     }
 
     /**
-     * Number of people who actually attended; drives the per-person rate tier.
+     * People who actually attended, not attendee rows: a family client contributes
+     * the members who were there. Drives the per-person rate tier.
      */
     public function headcount(): int
     {
-        return $this->attendees->where('attended', true)->count();
+        return (int) $this->attendees->sum(fn (SessionAttendee $attendee) => $attendee->peopleCount());
+    }
+
+    /**
+     * Everyone who attended, by name, with families expanded into their members.
+     *
+     * @return list<string>
+     */
+    public function peopleNames(): array
+    {
+        return $this->attendees
+            ->flatMap(fn (SessionAttendee $attendee) => $attendee->attended ? $attendee->peopleNames() : [])
+            ->values()
+            ->all();
     }
 
     public function isCompleted(): bool

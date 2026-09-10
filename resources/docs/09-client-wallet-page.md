@@ -3,7 +3,7 @@ Each client has a private web page that shows their side of the story: balance, 
 ## What the client sees
 
 ![The client's Fitness Wallet page, list view](/images/docs/portal-list.png)
-*Ava's page. The balance is followed by a plain-English reading of it, such as "about 5 single sessions left".*
+*Ava's page. The balance is followed by a plain-English reading of it, such as "about 5 single sessions left". For a family it counts whole-family sessions, priced as though every member attends, so the number is never optimistic.*
 
 - **Fitness Wallet balance** (or **Account balance** for a member) with a sentence explaining what it means.
 - **Your plan** and how it bills, and **How to pay** with your accepted methods and e-Transfer address.

@@ -46,6 +46,8 @@ class SessionCompletedMail extends Mailable implements ShouldQueue
                 'trainer' => $session->trainer,
                 'balance' => $client->balance(),
                 'tier' => Plan::headcountLabel($session->headcount()),
+                'rateTier' => Plan::rateTierLabel($session->headcount()),
+                'members' => $this->attendee->members->where('attended', true),
                 'isMonthly' => $client->isOnMonthlyPlan(),
             ],
         );

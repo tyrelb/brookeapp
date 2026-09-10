@@ -52,6 +52,15 @@ class DatabaseSeeder extends Seeder
         $this->rates($legacy, $pt, [1 => 50, 2 => 28, 3 => 22, 4 => 18]);
         $this->rates($legacy, $group, [1 => 40, 2 => 22]);
 
+        $family = Plan::create([
+            'user_id' => $brooke->id,
+            'name' => 'Family pay-as-you-go',
+            'type' => PlanType::Family,
+            'description' => 'One wallet for the whole household; each member who trains is charged.',
+        ]);
+        $this->rates($family, $pt, [1 => 60, 2 => 45, 3 => 25, 4 => 22]);
+        $this->rates($family, $group, [1 => 45, 2 => 30, 3 => 22, 4 => 18]);
+
         $monthly = Plan::create(['user_id' => $brooke->id, 'name' => 'Monthly Unlimited', 'type' => PlanType::Monthly, 'monthly_fee' => 300, 'billing_day' => 1, 'description' => 'Flat fee, train as often as you like.']);
 
         $clients = collect([
@@ -82,6 +91,27 @@ class DatabaseSeeder extends Seeder
 
             return $client;
         })->keyBy('first_name');
+
+        // A household on one wallet: the trainer ticks who turned up for each session.
+        $barnes = Client::create([
+            'user_id' => $brooke->id,
+            'plan_id' => $family->id,
+            'first_name' => 'Barnes',
+            'last_name' => 'Family',
+            'email' => 'barnes.family@example.com',
+            'phone' => '604-555-0177',
+            'started_at' => now()->subMonths(3)->startOfMonth()->toDateString(),
+        ]);
+
+        foreach (['Mom (Sarah)', 'Dad (Tom)', 'Ellie', 'Sam', 'Alex'] as $order => $memberName) {
+            $barnes->members()->create([
+                'user_id' => $brooke->id,
+                'name' => $memberName,
+                'sort_order' => $order,
+            ]);
+        }
+
+        app(RecordPayment::class)->handle($barnes, 900, PaymentMethod::ETransfer, now()->subMonths(2)->startOfMonth()->addDays(2));
 
         // Monthly fees for the last two months and this month, paid for the earlier ones.
         foreach ([2, 1, 0] as $monthsAgo) {
@@ -127,6 +157,25 @@ class DatabaseSeeder extends Seeder
             }
 
             $day->addDay();
+        }
+
+        // Two family sessions: everyone one week, two of them the next.
+        foreach ([[10, ['Mom (Sarah)', 'Dad (Tom)', 'Ellie', 'Sam']], [3, ['Mom (Sarah)', 'Ellie']]] as [$daysAgo, $attending]) {
+            $session = TrainingSession::create([
+                'user_id' => $brooke->id,
+                'service_id' => $group->id,
+                'starts_at' => now()->subDays($daysAgo)->setTime(17, 0),
+                'duration_minutes' => $group->duration_minutes,
+                'status' => SessionStatus::Scheduled,
+            ]);
+
+            $attendee = $session->attendees()->create(['client_id' => $barnes->id, 'attended' => true]);
+            $attendee->setRelation('client', $barnes);
+            $attendee->syncMembers($barnes->members->mapWithKeys(fn ($member) => [
+                $member->id => ['attended' => in_array($member->name, $attending, true), 'price_override' => null],
+            ])->all());
+
+            app(CompleteTrainingSession::class)->handle($session->fresh(), $session->starts_at->copy()->addHour());
         }
 
         // Top-ups so most wallets stay positive.

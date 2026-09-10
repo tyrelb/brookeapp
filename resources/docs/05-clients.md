@@ -26,6 +26,18 @@ Click **Add client**.
 5. **Notes** are private to you.
 6. Click **Add client**. You land on their page.
 
+## Families
+
+A household that trains together can share one client record and one Fitness Wallet. Put the client on a **family plan** (see Services and plans) and a **Family members** box appears on the client form.
+
+1. Put the household's name in **Family name** — "Barnes", say, with "Family" as the last name, so the client reads as "Barnes Family".
+2. List the members, one per line, up to ten. Use whatever you would say out loud: "Mom (Sarah)", "Dad", "Ellie".
+3. Save. The client page now shows a **Family members** card, and the household gets one email address, one wallet link and one balance.
+
+When you log or book a session you add "Barnes Family" once, then tick which members are coming. Nobody is ticked to begin with, so a session cannot quietly charge for someone who stayed home. The wallet is charged once for the session, for the people who were there, and the ledger line names them.
+
+Removing a member who has already trained keeps them on those past sessions; they simply stop being offered on new ones. Members you add later do not join bookings that already exist — open a repeating booking and use **Apply attendees to following** if you want them added.
+
 ## The client page
 
 ![Ava's client page: balance, contact, wallet link and ledger](/images/docs/client-page.png)

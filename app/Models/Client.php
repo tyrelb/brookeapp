@@ -42,6 +42,9 @@ class Client extends Model
         ];
     }
 
+    /** Families hold several people on one wallet; everyone else holds one. */
+    public const MAX_MEMBERS = 10;
+
     public function plan(): BelongsTo
     {
         return $this->belongsTo(Plan::class);
@@ -85,9 +88,26 @@ class Client extends Model
         return $this->plan?->type === PlanType::Monthly;
     }
 
+    public function isOnFamilyPlan(): bool
+    {
+        return $this->plan?->isFamily() ?? false;
+    }
+
+    /** Members of a family client, in the order the trainer arranged them. */
+    public function members(): HasMany
+    {
+        return $this->hasMany(FamilyMember::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    public function activeMembers(): HasMany
+    {
+        return $this->members()->where('active', true);
+    }
+
+    /** Deposits money and is charged per session — pay-as-you-go or family. */
     public function isOnWalletPlan(): bool
     {
-        return $this->plan?->type === PlanType::Wallet;
+        return $this->plan?->usesWallet() ?? false;
     }
 
     /**
@@ -138,7 +158,8 @@ class Client extends Model
         return $query->where(function (Builder $q) use ($term) {
             $q->where('first_name', 'like', "%{$term}%")
                 ->orWhere('last_name', 'like', "%{$term}%")
-                ->orWhere('email', 'like', "%{$term}%");
+                ->orWhere('email', 'like', "%{$term}%")
+                ->orWhereHas('members', fn (Builder $m) => $m->where('name', 'like', "%{$term}%"));
         });
     }
 

@@ -6,6 +6,7 @@
 
         <flux:radio.group wire:model.live="type" label="How is this plan billed?">
             <flux:radio value="wallet" label="Pay-as-you-go (Fitness Wallet)" description="Clients deposit money; each session deducts a per-person rate plus GST." />
+            <flux:radio value="family" label="Family (one shared Fitness Wallet)" description="Several named people on one wallet. Each family member who attends is charged the rate for the size of the group." />
             <flux:radio value="monthly" label="Monthly membership" description="A flat fee plus GST is posted each month; all sessions are included." />
         </flux:radio.group>
 
@@ -17,7 +18,7 @@
         @else
             <div>
                 <flux:heading size="lg">Session rates</flux:heading>
-                <flux:subheading>Per person, before GST. Leave a tier blank to fall back to the next lower tier (e.g. a Triple with no rate uses the Partner rate).</flux:subheading>
+                <flux:subheading>Per person, before GST. Leave a tier blank to fall back to the next lower tier (e.g. a Triple with no rate uses the Partner rate). Groups of five or more pay the Quad rate.</flux:subheading>
 
                 @if ($services->isEmpty())
                     <flux:callout variant="warning" class="mt-3" icon="exclamation-triangle">

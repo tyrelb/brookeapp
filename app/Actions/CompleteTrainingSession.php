@@ -9,10 +9,11 @@ use App\Models\Plan;
 use App\Models\SessionAttendee;
 use App\Models\TrainingSession;
 use App\Models\WalletTransaction;
-use App\Services\GstCalculator;
-use App\Services\PriceResolver;
+use App\Services\SessionPricer;
+use App\Support\AttendeeLine;
 use Carbon\CarbonInterface;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Str;
 
 /**
  * Marks a session complete and charges every attendee according to their plan.
@@ -21,45 +22,56 @@ use Illuminate\Support\Facades\DB;
  */
 class CompleteTrainingSession
 {
-    public function __construct(private PriceResolver $prices) {}
+    public function __construct(private SessionPricer $pricer) {}
 
     public function handle(TrainingSession $session, ?CarbonInterface $completedAt = null): TrainingSession
     {
         return DB::transaction(function () use ($session, $completedAt) {
-            $session->loadMissing(['attendees.client.plan.rates', 'service', 'trainer']);
+            $session->loadMissing(['attendees.client.plan.rates', 'attendees.members', 'service', 'trainer']);
 
             if ($session->isCompleted()) {
                 throw new BillingException('This session has already been completed. Reopen it to make changes.');
             }
 
-            $gstRate = $session->trainer->effectiveGstRate();
-            $headcount = max(1, $session->headcount());
-            $tier = Plan::headcountLabel($headcount);
+            $lines = [];
+            foreach ($session->attendees as $attendee) {
+                if ($attendee->attended && $attendee->client?->isOnFamilyPlan() && $attendee->members->where('attended', true)->isEmpty()) {
+                    throw new BillingException("Tick which {$attendee->client->full_name} members attended before completing this session.");
+                }
+
+                $lines[$attendee->client_id] = AttendeeLine::fromAttendee($attendee);
+            }
+
+            $priced = $this->pricer->price($lines, $session->service, $session->trainer->effectiveGstRate());
 
             foreach ($session->attendees as $attendee) {
-                if (! $attendee->attended) {
+                $row = $priced['rows'][$attendee->client_id];
+
+                if (! $row['attended']) {
                     $attendee->update(['subtotal' => 0, 'gst_amount' => 0, 'total' => 0, 'wallet_transaction_id' => null]);
+                    $attendee->members()->update(['subtotal' => 0]);
 
                     continue;
                 }
 
-                $subtotal = $this->prices->forAttendee(
-                    $attendee->client,
-                    $session->service,
-                    $headcount,
-                    $attendee->price_override !== null ? (float) $attendee->price_override : null,
-                );
-                $gst = GstCalculator::onExclusive($subtotal, $gstRate);
-                $total = round($subtotal + $gst, 2);
+                if ($row['error'] !== null) {
+                    throw new BillingException($row['error']);
+                }
 
-                $transaction = $total > 0 ? $this->charge($session, $attendee, $subtotal, $gst, $total, $tier) : null;
+                $transaction = $row['total'] > 0
+                    ? $this->charge($session, $attendee, $row['subtotal'], $row['gst'], $row['total'], $priced['tier'])
+                    : null;
 
                 $attendee->update([
-                    'subtotal' => $subtotal,
-                    'gst_amount' => $gst,
-                    'total' => $total,
+                    'subtotal' => $row['subtotal'],
+                    'gst_amount' => $row['gst'],
+                    'total' => $row['total'],
                     'wallet_transaction_id' => $transaction?->id,
                 ]);
+
+                foreach ($row['members'] as $member) {
+                    $attendee->members()->where('family_member_id', $member['id'])->update(['subtotal' => $member['subtotal']]);
+                }
             }
 
             $session->update([
@@ -69,6 +81,23 @@ class CompleteTrainingSession
 
             return $session->refresh();
         });
+    }
+
+    /**
+     * "Personal Training (Triple)" for one person; a family's charge names who it covers,
+     * because it is one ledger line standing in for several people.
+     */
+    private function describe(TrainingSession $session, SessionAttendee $attendee, string $tier): string
+    {
+        $line = "{$session->service->name} ({$tier})";
+
+        if (! $attendee->client?->isOnFamilyPlan()) {
+            return $line;
+        }
+
+        $names = implode(', ', $attendee->peopleNames());
+
+        return Str::limit("{$line} — {$names}", 250);
     }
 
     private function charge(TrainingSession $session, SessionAttendee $attendee, float $subtotal, float $gst, float $total, string $tier): WalletTransaction
@@ -82,7 +111,7 @@ class CompleteTrainingSession
             'gst_amount' => $gst,
             'transacted_on' => $session->starts_at->toDateString(),
             'training_session_id' => $session->id,
-            'description' => "{$session->service->name} ({$tier})",
+            'description' => $this->describe($session, $attendee, $tier),
         ]);
     }
 }

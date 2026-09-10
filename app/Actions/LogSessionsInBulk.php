@@ -26,7 +26,7 @@ class LogSessionsInBulk
     /**
      * @param  array{user_id?:int, service_id:int, gym_id:?int, time:?string, duration_minutes:int, notes:?string}  $attributes
      * @param  list<string>  $dates
-     * @param  array<int, array{attended?: bool, price_override?: ?float}>  $attendees  keyed by client id
+     * @param  array<int, array{attended?: bool, price_override?: ?float, members?: array<int, array{attended: bool, price_override: ?float}>}>  $attendees  keyed by client id
      * @return list<TrainingSession>
      */
     public function handle(array $attributes, array $dates, array $attendees, bool $complete = true): array
@@ -54,11 +54,15 @@ class LogSessionsInBulk
                 ]);
 
                 foreach ($attendees as $clientId => $state) {
-                    $session->attendees()->create([
+                    $attendee = $session->attendees()->create([
                         'client_id' => (int) $clientId,
                         'attended' => (bool) ($state['attended'] ?? true),
                         'price_override' => $state['price_override'] ?? null,
                     ]);
+
+                    if (($state['members'] ?? []) !== []) {
+                        $attendee->syncMembers($state['members']);
+                    }
                 }
 
                 $sessions[] = $complete ? $this->complete->handle($session) : $session;
