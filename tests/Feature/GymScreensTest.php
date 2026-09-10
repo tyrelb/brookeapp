@@ -2,6 +2,7 @@
 
 use App\Actions\CompleteTrainingSession;
 use App\Livewire\Reports\GymUsage;
+use App\Livewire\Sessions\BulkLog;
 use App\Livewire\Sessions\Log;
 use App\Livewire\Sessions\Show;
 use App\Livewire\Settings\Gyms;
@@ -15,6 +16,7 @@ use App\Models\SessionAttendee;
 use App\Models\TrainingSession;
 use App\Models\User;
 use App\Models\WalletTransaction;
+use App\Services\GymUsageReportBuilder;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -27,10 +29,10 @@ beforeEach(function () {
     $this->clients = Client::factory()->count(3)->create(['user_id' => $this->trainer->id, 'plan_id' => $this->plan->id]);
 });
 
-function completedAt($test, ?Gym $gym, string $startsAt, int $people): TrainingSession
+function completedAt($test, ?Gym $gym, string $startsAt, int $people, int $minutes = 60): TrainingSession
 {
     $session = TrainingSession::factory()->completed()->create([
-        'user_id' => $test->trainer->id, 'service_id' => $test->service->id, 'gym_id' => $gym?->id, 'starts_at' => $startsAt,
+        'user_id' => $test->trainer->id, 'service_id' => $test->service->id, 'gym_id' => $gym?->id, 'starts_at' => $startsAt, 'duration_minutes' => $minutes,
     ]);
     foreach ($test->clients->take($people) as $client) {
         SessionAttendee::factory()->create(['training_session_id' => $session->id, 'client_id' => $client->id]);
@@ -278,4 +280,119 @@ it('books a cover session for later without pricing it yet', function () {
 
     expect($form->get('attendees'))->toBe([])
         ->and($form->get('repeat'))->toBeFalse();
+});
+
+it('pro-rates the usage report by session length', function () {
+    $gym = Gym::factory()->noGst()->create(['user_id' => $this->trainer->id, 'name' => 'Westside', 'is_default' => true]);
+    completedAt($this, $gym, '2026-09-01 07:00:00', 1, 90);
+
+    Livewire::test(GymUsage::class, ['month' => '2026-09'])
+        ->assertSee('90 min')
+        ->assertSee('$18.00')   // the hourly rate, shown so the charge is explicable
+        ->assertSee('$27.00');  // what the session actually costs
+});
+
+it('renders a snapshot finalized before usage went hourly', function () {
+    $gym = Gym::factory()->noGst()->create(['user_id' => $this->trainer->id, 'name' => 'Westside', 'is_default' => true]);
+
+    // The old shape: no minutes, no amount — rate WAS the charge.
+    GymUsageReport::create([
+        'user_id' => $this->trainer->id,
+        'gym_id' => $gym->id,
+        'period' => '2026-08',
+        'finalized_at' => now(),
+        'snapshot' => [
+            'gym' => ['id' => $gym->id, 'name' => $gym->name, 'billing_model' => $gym->billing_model->value, 'charges_gst' => false, 'gst_rate' => 0.0],
+            'period' => '2026-08',
+            'label' => 'August 2026',
+            'rows' => [[
+                'session_id' => 1, 'date' => '2026-08-03', 'time' => '07:00', 'service' => 'PT',
+                'attendees' => ['Someone'], 'people' => 1, 'rate' => 18.0, 'billable' => true,
+            ]],
+            'summary' => [
+                'sessions' => 1, 'sessions_excluded' => 0, 'people' => 1,
+                'by_people' => [1 => ['sessions' => 1, 'rate' => 18.0, 'amount' => 18.0]],
+                'usage_subtotal' => 18.0, 'monthly_fee' => null, 'subtotal' => 18.0, 'gst' => 0.0, 'total' => 18.0,
+            ],
+            'unassigned' => 0,
+        ],
+    ]);
+
+    Livewire::test(GymUsage::class, ['month' => '2026-08'])
+        ->assertOk()
+        ->assertSee('$18.00');
+});
+
+it('previews what the gym charges while logging a session', function () {
+    Gym::factory()->create(['user_id' => $this->trainer->id, 'name' => 'Westside', 'is_default' => true]);
+
+    Livewire::test(Log::class)
+        ->set('service_id', (string) $this->service->id)
+        ->call('addClient', $this->clients[0]->id)
+        ->set('duration_minutes', '90')
+        ->assertSee('You pay Westside')
+        ->assertSee('$27.00')
+        ->set('duration_minutes', '60')
+        ->assertSee('$18.00');
+});
+
+it('says nothing about per-session cost for a monthly-only gym', function () {
+    Gym::factory()->monthly(450)->create(['user_id' => $this->trainer->id, 'name' => 'Westside', 'is_default' => true]);
+
+    Livewire::test(Log::class)
+        ->set('service_id', (string) $this->service->id)
+        ->call('addClient', $this->clients[0]->id)
+        ->set('duration_minutes', '90')
+        ->assertDontSee('You pay Westside')
+        ->assertSee('flat monthly rate');
+});
+
+it('quotes no gym figure until someone is actually attending', function () {
+    Gym::factory()->create(['user_id' => $this->trainer->id, 'name' => 'Westside', 'is_default' => true]);
+
+    Livewire::test(Log::class)
+        ->set('service_id', (string) $this->service->id)
+        ->set('duration_minutes', '90')
+        ->assertSee('Add clients to see what Westside charges you')
+        ->assertDontSee('$27.00');
+});
+
+it('totals the gym cost across every date in a bulk log', function () {
+    Gym::factory()->create(['user_id' => $this->trainer->id, 'name' => 'Westside', 'is_default' => true]);
+
+    Livewire::test(BulkLog::class)
+        ->set('service_id', (string) $this->service->id)
+        ->call('addClient', $this->clients[0]->id)
+        ->set('duration_minutes', '90')
+        ->call('toggleDate', '2026-06-03')
+        ->call('toggleDate', '2026-06-10')
+        ->assertSee('You pay Westside, per session')
+        ->assertSee('$27.00')   // one session
+        ->assertSee('$54.00');  // both dates
+});
+
+it('shows what a logged session cost at the gym on its own page', function () {
+    $gym = Gym::factory()->create(['user_id' => $this->trainer->id, 'name' => 'Westside', 'is_default' => true]);
+    $session = completedAt($this, $gym, '2026-09-01 07:00:00', 1, 90);
+
+    Livewire::test(Show::class, ['trainingSession' => $session])
+        ->assertOk()
+        ->assertSee('Costs you $27.00')
+        ->assertSee('$18.00/hour × 90 min');
+});
+
+it('exports the length and hourly rate in the usage csv', function () {
+    $gym = Gym::factory()->noGst()->create(['user_id' => $this->trainer->id, 'name' => 'Westside', 'is_default' => true]);
+    completedAt($this, $gym, '2026-09-01 07:00:00', 1, 90);
+
+    $component = Livewire::test(GymUsage::class, ['month' => '2026-09'])->instance();
+    $response = $component->exportCsv(app(GymUsageReportBuilder::class));
+
+    ob_start();
+    $response->sendContent();
+    $csv = ob_get_clean();
+
+    expect($csv)->toContain('"# of people",Minutes,"Rate per hour","$ for the session"')
+        ->and($csv)->toContain('1,90,18.00,27.00')   // people, minutes, hourly rate, pro-rated charge
+        ->and($csv)->toContain('Hours,1.50');
 });

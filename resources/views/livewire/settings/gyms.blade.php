@@ -15,9 +15,13 @@
                             <div class="mt-1 text-sm text-zinc-500">
                                 {{ $gym->billing_model->label() }}
                                 @if ($gym->chargesMonthly()) · {{ money($gym->monthly_fee) }}/month @endif
-                                @if ($gym->chargesUsage()) · {{ money($gym->rateFor(1)) }} for 1, {{ money($gym->rateFor(2)) }} for 2 … {{ money($gym->rateFor(10)) }} for 10 @endif
+                                @if ($gym->chargesUsage()) · {{ money($gym->rateFor(1)) }}/hr for 1, {{ money($gym->rateFor(2)) }}/hr for 2 … {{ money($gym->rateFor(10)) }}/hr for 10 @endif
                                 · {{ $gym->charges_gst ? number_format((float) $gym->gst_rate, 2).'% GST' : 'no GST' }}
                             </div>
+                            @if ($gym->chargesUsage() && $gym->rateFor(1) !== null)
+                                {{-- This gym's real numbers, so it stays true if the card is edited. --}}
+                                <div class="mt-1 text-xs text-zinc-500">A 90-minute session for 1 person costs {{ money($gym->chargeFor(1, 90)) }}.</div>
+                            @endif
                             @if ($gym->coversSessions())
                                 <div class="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
                                     Pays you {{ money($gym->coverRateFor(1)) }} for 1, {{ money($gym->coverRateFor(2)) }} for 2 to cover their clients
@@ -37,7 +41,7 @@
                     </div>
                 </div>
             @empty
-                <x-empty-state title="No gyms yet" description="Add the gym you train at to track what it charges you per session and per month." />
+                <x-empty-state title="No gyms yet" description="Add the gym you train at to track what it charges you by the hour and per month." />
             @endforelse
 
             @if (! $isFirst && $unassigned > 0)
@@ -70,8 +74,8 @@
 
             @if ($billing_model !== 'monthly')
                 <div>
-                    <flux:label>Per-session rate by group size (before GST)</flux:label>
-                    <flux:description>Leave a size blank to use the next smaller size's rate. Groups over 10 use the 10-person rate.</flux:description>
+                    <flux:label>Hourly rate by group size (before GST)</flux:label>
+                    <flux:description>Sessions bill pro-rata by length: 90 minutes costs one and a half times the hourly rate, 30 minutes half. Leave a size blank to use the next smaller size's rate. Groups over 10 use the 10-person rate.</flux:description>
                     <div class="mt-2 grid grid-cols-5 gap-2">
                         @foreach ($people as $n)
                             <flux:input wire:model="rates.{{ $n }}" type="number" step="0.01" min="0" placeholder="—">

@@ -21,7 +21,7 @@ beforeEach(function () {
 /**
  * Creates a completed session at the gym with N attendees (optionally some no-shows).
  */
-function gymSession($test, string $startsAt, int $people, int $noShows = 0, ?Gym $gym = null, bool $billable = true): TrainingSession
+function gymSession($test, string $startsAt, int $people, int $noShows = 0, ?Gym $gym = null, bool $billable = true, int $minutes = 60): TrainingSession
 {
     $session = TrainingSession::factory()->completed()->create([
         'user_id' => $test->trainer->id,
@@ -29,6 +29,7 @@ function gymSession($test, string $startsAt, int $people, int $noShows = 0, ?Gym
         'gym_id' => ($gym ?? $test->gym)->id,
         'gym_billable' => $billable,
         'starts_at' => $startsAt,
+        'duration_minutes' => $minutes,
     ]);
 
     foreach ($test->clients->take($people + $noShows)->values() as $i => $client) {
@@ -38,7 +39,7 @@ function gymSession($test, string $startsAt, int $people, int $noShows = 0, ?Gym
     return $session;
 }
 
-it('resolves per-session rates by group size with a cap at ten', function () {
+it('resolves hourly rates by group size with a cap at ten', function () {
     expect($this->gym->rateFor(1))->toBe(18.0)
         ->and($this->gym->rateFor(2))->toBe(26.0)
         ->and($this->gym->rateFor(5))->toBe(52.0)
@@ -52,6 +53,26 @@ it('resolves per-session rates by group size with a cap at ten', function () {
 
     $monthlyOnly = Gym::factory()->monthly()->create(['user_id' => $this->trainer->id]);
     expect($monthlyOnly->rateFor(3))->toBeNull();
+});
+
+it('pro-rates the hourly rate by how long the session ran', function () {
+    expect($this->gym->chargeFor(1, 60))->toBe(18.0)
+        ->and($this->gym->chargeFor(1, 90))->toBe(27.0)
+        ->and($this->gym->chargeFor(2, 90))->toBe(39.0)
+        ->and($this->gym->chargeFor(1, 30))->toBe(9.0)
+        ->and($this->gym->chargeFor(1, 45))->toBe(13.5)
+        ->and($this->gym->chargeFor(1, 5))->toBe(1.5)      // the form's minimum
+        ->and($this->gym->chargeFor(1, 480))->toBe(144.0)  // the form's maximum
+        ->and($this->gym->chargeFor(6, 90))->toBe(105.0)
+        ->and($this->gym->chargeFor(14, 90))->toBe(105.0)  // above MAX_PEOPLE
+        ->and($this->gym->chargeFor(0, 90))->toBe(27.0)    // clamped up to one person
+        ->and($this->gym->chargeFor(3, 25))->toBe(14.58);  // 35 * 25/60 = 14.583…
+
+    $sparse = Gym::factory()->create(['user_id' => $this->trainer->id, 'usage_rates' => [1 => 20, 4 => 40]]);
+    expect($sparse->chargeFor(3, 90))->toBe(30.0)->and($sparse->chargeFor(9, 30))->toBe(20.0);
+
+    $monthlyOnly = Gym::factory()->monthly()->create(['user_id' => $this->trainer->id]);
+    expect($monthlyOnly->chargeFor(3, 90))->toBeNull();
 });
 
 it('builds a monthly usage report with rows, a by-size summary, monthly fee and gst', function () {
@@ -76,15 +97,18 @@ it('builds a monthly usage report with rows, a by-size summary, monthly fee and 
         ->and($r['rows'])->toHaveCount(4)
         ->and($r['rows'][1]['people'])->toBe(2)
         ->and($r['rows'][1]['rate'])->toBe(26.0)
+        ->and($r['rows'][1]['minutes'])->toBe(60)
+        ->and($r['rows'][1]['amount'])->toBe(26.0)
         ->and($r['rows'][1]['time'])->toBe('08:00')
         ->and($r['rows'][3]['billable'])->toBeFalse()
         ->and($r['summary']['sessions'])->toBe(3)
         ->and($r['summary']['sessions_excluded'])->toBe(1)
         ->and($r['summary']['people'])->toBe(9)
+        ->and($r['summary']['minutes'])->toBe(180)
         ->and($r['summary']['by_people'])->toBe([
-            1 => ['sessions' => 1, 'rate' => 18.0, 'amount' => 18.0],
-            2 => ['sessions' => 1, 'rate' => 26.0, 'amount' => 26.0],
-            6 => ['sessions' => 1, 'rate' => 70.0, 'amount' => 70.0],
+            1 => ['sessions' => 1, 'rate' => 18.0, 'minutes' => 60, 'amount' => 18.0],
+            2 => ['sessions' => 1, 'rate' => 26.0, 'minutes' => 60, 'amount' => 26.0],
+            6 => ['sessions' => 1, 'rate' => 70.0, 'minutes' => 60, 'amount' => 70.0],
         ])
         ->and($r['summary']['usage_subtotal'])->toBe(114.0)
         ->and($r['summary']['monthly_fee'])->toBe(200.0)
@@ -92,6 +116,24 @@ it('builds a monthly usage report with rows, a by-size summary, monthly fee and 
         ->and($r['summary']['gst'])->toBe(15.7)
         ->and($r['summary']['total'])->toBe(329.7)
         ->and($r['unassigned'])->toBe(1);
+});
+
+it('bills each session pro-rata by its length', function () {
+    gymSession($this, '2026-09-01 07:00:00', 1, minutes: 90);   // 18/hr -> 27.00
+    gymSession($this, '2026-09-02 08:00:00', 1, minutes: 30);   // 18/hr ->  9.00
+    gymSession($this, '2026-09-03 09:00:00', 2, minutes: 45);   // 26/hr -> 19.50
+
+    $r = app(GymUsageReportBuilder::class)->build($this->gym, 2026, 9);
+
+    expect($r['rows'][0]['minutes'])->toBe(90)
+        ->and($r['rows'][0]['rate'])->toBe(18.0)      // the rate stays hourly
+        ->and($r['rows'][0]['amount'])->toBe(27.0)    // the charge is pro-rated
+        ->and($r['summary']['usage_subtotal'])->toBe(55.5)
+        ->and($r['summary']['minutes'])->toBe(165)
+        ->and($r['summary']['by_people'][1])->toBe(['sessions' => 2, 'rate' => 18.0, 'minutes' => 120, 'amount' => 36.0])
+        // The summary must be the sum of the rows, not an independent recomputation,
+        // or the two tables on the report stop agreeing with each other.
+        ->and($r['summary']['usage_subtotal'])->toBe(round(collect($r['rows'])->where('billable', true)->sum('amount'), 2));
 });
 
 it('respects the billing model and the gst switch', function () {
@@ -108,6 +150,8 @@ it('respects the billing model and the gst switch', function () {
 
     $m = app(GymUsageReportBuilder::class)->build($monthlyOnly, 2026, 9);
     expect($m['rows'][0]['rate'])->toBeNull()
+        ->and($m['rows'][0]['amount'])->toBeNull()
+        ->and($m['rows'][0]['minutes'])->toBe(60)
         ->and($m['summary']['people'])->toBe(2)
         ->and($m['summary']['usage_subtotal'])->toBe(0.0)
         ->and($m['summary']['subtotal'])->toBe(450.0)
@@ -134,6 +178,17 @@ it('finalizes a snapshot that survives later changes, and reopens', function () 
 
     expect(app(ReopenGymUsageReport::class)->handle($this->gym, '2026-09'))->toBeTrue()
         ->and(GymUsageReport::count())->toBe(0);
+});
+
+it('freezes a pro-rated snapshot even when the session is later re-timed', function () {
+    $session = gymSession($this, '2026-09-01 07:00:00', 1);   // 60 min -> 18.00
+
+    $report = app(FinalizeGymUsageReport::class)->handle($this->gym, 2026, 9);
+    $session->update(['duration_minutes' => 90]);
+
+    // toEqual, not toBe: the snapshot is JSON, so a whole-dollar float comes back an int.
+    expect($report->fresh()->snapshot['summary']['usage_subtotal'])->toEqual(18.0)
+        ->and(app(GymUsageReportBuilder::class)->build($this->gym, 2026, 9)['summary']['usage_subtotal'])->toBe(27.0);
 });
 
 it('picks the default gym for new sessions', function () {

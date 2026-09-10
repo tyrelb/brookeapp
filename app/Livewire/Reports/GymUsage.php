@@ -123,15 +123,20 @@ class GymUsage extends Component
             fputcsv($out, ["{$business} — gym usage at {$gym->name}, {$report['label']}"]);
             fputcsv($out, ['Status', $this->finalized($gym) ? 'Finalized' : 'Draft']);
             fputcsv($out, []);
-            fputcsv($out, ['Date', 'Time', 'Service', 'Attendees', '# of people', '$ for the session', 'Included']);
+            fputcsv($out, ['Date', 'Time', 'Service', 'Attendees', '# of people', 'Minutes', 'Rate per hour', '$ for the session', 'Included']);
             foreach ($report['rows'] as $row) {
+                // Rows snapshotted before usage went hourly carry only the flat rate, which was the charge.
+                $amount = $row['amount'] ?? $row['rate'];
+
                 fputcsv($out, [
                     $row['date'],
                     Carbon::createFromFormat('H:i', $row['time'])->format('g:i a'),
                     $row['service'],
                     implode(', ', $row['attendees']),
                     $row['people'],
+                    $row['minutes'] ?? '',
                     $row['rate'] === null ? '' : number_format($row['rate'], 2, '.', ''),
+                    $amount === null ? '' : number_format($amount, 2, '.', ''),
                     $row['billable'] ? 'yes' : 'no',
                 ]);
             }
@@ -139,6 +144,9 @@ class GymUsage extends Component
             fputcsv($out, ['Sessions included', $summary['sessions']]);
             fputcsv($out, ['Sessions excluded', $summary['sessions_excluded']]);
             fputcsv($out, ['People', $summary['people']]);
+            if (isset($summary['minutes'])) {
+                fputcsv($out, ['Hours', number_format($summary['minutes'] / 60, 2)]);
+            }
             fputcsv($out, ['Usage charges', number_format($summary['usage_subtotal'], 2, '.', '')]);
             if ($summary['monthly_fee'] !== null) {
                 fputcsv($out, ['Monthly rate', number_format($summary['monthly_fee'], 2, '.', '')]);

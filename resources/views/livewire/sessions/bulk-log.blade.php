@@ -25,7 +25,7 @@
                 </flux:select>
             </div>
             <flux:input wire:model="time" label="Start time" type="time" description="Optional." />
-            <flux:input wire:model="duration_minutes" label="Duration (min)" type="number" min="5" max="480" />
+            <flux:input wire:model.live.debounce.500ms="duration_minutes" label="Duration (min)" type="number" min="5" max="480" />
             <div class="sm:col-span-2 lg:col-span-4">
                 <flux:input wire:model="notes" label="Notes" placeholder="Optional — added to every session in this batch" />
             </div>
@@ -220,6 +220,24 @@
                             <span class="tabular-nums">{{ money($grandTotal) }}</span>
                         </div>
                     </div>
+
+                    {{-- Money out, in its own block so it cannot be read as part of the total above. --}}
+                    @if ($gymCharge && $gymCharge['charges'] && $gymCharge['amount'] !== null)
+                        <div class="mt-3 rounded-xl border border-amber-200 bg-amber-50 p-4 text-sm dark:border-amber-800/60 dark:bg-amber-900/20">
+                            <div class="flex items-center justify-between text-amber-900 dark:text-amber-200">
+                                <span class="flex items-center gap-1.5">
+                                    <flux:icon.building-office-2 variant="micro" />
+                                    You pay {{ $gymCharge['name'] }}, per session
+                                </span>
+                                <span class="tabular-nums">{{ money($gymCharge['amount']) }}</span>
+                            </div>
+                            <div class="mt-2 flex items-center justify-between border-t border-amber-200 pt-2 font-medium text-amber-900 dark:border-amber-800/60 dark:text-amber-200">
+                                <span>× {{ count($dates) }} {{ Str::plural('session', count($dates)) }}</span>
+                                <span class="tabular-nums">{{ money($gymGrandTotal) }}</span>
+                            </div>
+                            <p class="mt-1 text-xs text-amber-800/80 dark:text-amber-200/70">{{ money($gymCharge['rate']) }}/hour × {{ $gymCharge['minutes'] }} min · before GST · not billed to clients</p>
+                        </div>
+                    @endif
                 @endif
             </div>
         </section>

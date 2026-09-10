@@ -92,16 +92,16 @@ Tokens are 48 random characters, the route is rate-limited, the page is `noindex
 
 ## Gyms and the gym usage report
 
-Trainers can set up to three **gyms** (Settings → Gyms), each with its own billing model: monthly rate only, monthly rate plus per-session usage, or usage only. Usage is charged per session by group size with an editable rate card for 1–10 people (pre-filled $18 / $26 / $35 / $41 / $52 and $70 for 6–10; 11+ uses the 10-person rate). Each gym can charge GST or not. Each client can have a default gym (shown on the client form when there is more than one gym). When logging or booking, the session's gym is pre-filled from the first client added, or the trainer's default gym, and is required once any gym exists so every session reconciles against a gym invoice. Sessions also carry a "counts toward gym usage" flag.
+Trainers can set up to three **gyms** (Settings → Gyms), each with its own billing model: monthly rate only, monthly rate plus hourly usage, or usage only. Usage is charged **by the hour** at a rate that depends on group size, with an editable rate card for 1–10 people (pre-filled $18 / $26 / $35 / $41 / $52 and $70 for 6–10; 11+ uses the 10-person rate). Each session bills pro-rata by its length, so a 60-minute session for one person costs $18 and a 90-minute one costs $27; the log and booking forms show what the gym will charge as you fill them in. Each gym can charge GST or not. Each client can have a default gym (shown on the client form when there is more than one gym). When logging or booking, the session's gym is pre-filled from the first client added, or the trainer's default gym, and is required once any gym exists so every session reconciles against a gym invoice. Sessions also carry a "counts toward gym usage" flag.
 
-**Reports → Gym usage** shows, per gym and month, a summary on top (sessions, people, usage charges, monthly rate, GST, total owed) and a detail table underneath with Date, Time, # of people and $ for the session, with a total at the bottom. Until the month is finalized, any row can be unticked to ignore it. **Finalize** locks the month and stores a snapshot so later edits don't change it; **Reopen** unlocks it. CSV export and a print-friendly layout are included, and completed sessions with no gym can be assigned to the selected gym in one click.
+**Reports → Gym usage** shows, per gym and month, a summary on top (sessions, people, usage charges, monthly rate, GST, total owed) and a detail table underneath with Date, Time, # of people, length, rate/hour and $ for the session, with a total at the bottom. Until the month is finalized, any row can be unticked to ignore it. **Finalize** locks the month and stores a snapshot so later edits don't change it; **Reopen** unlocks it. CSV export and a print-friendly layout are included, and completed sessions with no gym can be assigned to the selected gym in one click.
 
 ## Roadmap
 
 - **Phase 1** — auth, tenancy, clients, plans and services, Fitness Wallet ledger, session logging, payments, GST, monthly and annual reports, platform admin area.
 - **Phase 2** — scheduling calendar, booking emails with `.ics` invites, reschedule and cancellation updates, session receipts with remaining balance.
 - **Phase 3** — client magic-link Fitness Wallet page with balance, bookings and history, shareable from the client page and included in emails.
-- **Gym usage** — gyms with billing models and rate cards, sessions tagged by gym, monthly usage report with exclusions, finalize/reopen, CSV and print.
+- **Gym usage** — gyms with billing models and hourly rate cards, sessions tagged by gym, usage pro-rated by session length, monthly usage report with exclusions, finalize/reopen, CSV and print.
 
 ## User guide
 

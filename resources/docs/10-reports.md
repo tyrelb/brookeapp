@@ -31,9 +31,9 @@ The table has sessions, session revenue, monthly fees, revenue, GST charged, mon
 *A draft month. Every session counts until you untick it.*
 
 - **The cards**: sessions counted, people trained, usage charges (with the monthly rate underneath) and the total owed including GST. Family members count individually here too, because the gym charges by how many bodies were in the room.
-- **Summary by group size** shows how many sessions of each size and the rate for each, using the gym's rate card from Settings.
+- **Summary by group size** shows how many sessions of each size, the hours logged and the hourly rate for each, using the gym's rate card from Settings.
 - **Amount owed** adds the usage charges, monthly rate and GST.
-- **Detail** lists every completed session at that gym with its date, time, group size and charge. **Untick** a row to exclude a session the gym should not charge for; the totals update immediately.
+- **Detail** lists every completed session at that gym with its date, time, group size, length, hourly rate and charge. Sessions are billed pro-rata by length, so two sessions of the same size can cost different amounts. **Untick** a row to exclude a session the gym should not charge for; the totals update immediately.
 
 If some completed sessions have no gym, a notice offers to assign them to the selected gym in one click.
 

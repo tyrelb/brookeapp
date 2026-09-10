@@ -198,7 +198,7 @@ class DatabaseSeeder extends Seeder
             }
         }
 
-        // The gym Brooke rents space at: monthly rate plus per-session usage, with GST.
+        // The gym Brooke rents space at: monthly rate plus hourly usage, with GST.
         $gym = Gym::create([
             'user_id' => $brooke->id,
             'name' => 'Westside Athletic Club',

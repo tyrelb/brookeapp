@@ -4,7 +4,7 @@
 A pay-as-you-go client trained more than they had deposited, or a monthly member's fee has been posted and not yet paid. Record the payment when it arrives and the balance returns to zero or above. The dashboard lists everyone in this state.
 
 **Why does a session need a gym?**
-So the Gym usage report can reconcile every session against the gym's invoice. If you train at one gym it is filled in automatically. If you do not pay a gym per session, add the gym anyway with "Monthly rate only" or skip gyms entirely; the field only appears once you have more than one.
+So the Gym usage report can reconcile every session against the gym's invoice. If you train at one gym it is filled in automatically. If you do not rent gym space by the hour, add the gym anyway with "Monthly rate only" or skip gyms entirely; the field only appears once you have more than one.
 
 **How do I move a client to a different plan?**
 Open the client, click **Edit**, choose the new plan and save. Sessions from then on use the new rates; sessions already charged are unchanged.

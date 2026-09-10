@@ -121,16 +121,6 @@ class TrainingSession extends Model
     }
 
     /**
-     * How many people the gym counts for usage: attendee rows that turned up.
-     * Deliberately not headcount() — the gym rents space to a booking, so a family
-     * client is one person on the gym's rate card even when four of them trained.
-     */
-    public function gymHeadcount(): int
-    {
-        return $this->attendees->where('attended', true)->count();
-    }
-
-    /**
      * Everyone who attended, by name, with families expanded into their members.
      *
      * @return list<string>

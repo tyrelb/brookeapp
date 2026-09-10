@@ -14,7 +14,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('billing_model', 30); // App\Enums\GymBillingModel
             $table->decimal('monthly_fee', 10, 2)->nullable();
-            $table->json('usage_rates')->nullable(); // {"1": 18, "2": 26, ... "10": 70} per session, before GST
+            $table->json('usage_rates')->nullable(); // {"1": 18, "2": 26, ... "10": 70} hourly, before GST; each session bills pro-rata by its length
             $table->boolean('charges_gst')->default(true);
             $table->decimal('gst_rate', 5, 2)->default(5.00);
             $table->boolean('is_default')->default(false);

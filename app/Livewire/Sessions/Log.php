@@ -10,6 +10,7 @@ use App\Enums\SessionStatus;
 use App\Exceptions\BillingException;
 use App\Livewire\Sessions\Concerns\PicksAttendees;
 use App\Livewire\Sessions\Concerns\PreviewsCharges;
+use App\Livewire\Sessions\Concerns\PreviewsGymCharge;
 use App\Models\Client;
 use App\Models\Gym;
 use App\Models\Service;
@@ -31,7 +32,7 @@ use Livewire\Component;
  */
 class Log extends Component
 {
-    use PicksAttendees, PreviewsCharges;
+    use PicksAttendees, PreviewsCharges, PreviewsGymCharge;
 
     public string $mode = 'log'; // log | book
 
@@ -456,13 +457,16 @@ class Log extends Component
     {
         $selected = Client::query()->with('plan.rates', 'members')->whereIn('id', array_keys($this->attendees))->get()->keyBy('id');
         $service = Service::query()->find((int) $this->service_id);
+        $gyms = Gym::query()->active()->orderBy('name')->get();
+        $preview = $this->previewCharges($service, $selected);
 
         return view('livewire.sessions.log', [
             'services' => $this->services(),
-            'gyms' => Gym::query()->active()->orderBy('name')->get(),
+            'gyms' => $gyms,
             'candidates' => $this->candidateClients(),
             'selected' => $selected,
-            'preview' => $this->previewCharges($service, $selected),
+            'preview' => $preview,
+            'gymCharge' => $this->previewGymCharge($gyms->firstWhere('id', (int) $this->gym_id), $preview, $this->duration_minutes),
             'coverGyms' => Gym::query()->active()->get()->filter->coversSessions(),
             'coverPreview' => $this->cover ? $this->coverPreview() : null,
             'repeatPreview' => $this->isBooking() && $this->repeat ? $this->repeatPreview() : null,

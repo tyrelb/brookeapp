@@ -11,8 +11,8 @@ use Carbon\CarbonImmutable;
  * A month's statement between the trainer and one gym, in both directions.
  *
  * Usage: what she owes the gym — one row per completed session, priced from the gym's
- * rate card for that group size, plus the monthly rate, with the GYM's GST on top
- * (which she reclaims as an input tax credit).
+ * hourly rate card for that group size and pro-rated to how long the session ran, plus
+ * the monthly rate, with the GYM's GST on top (which she reclaims as an input tax credit).
  *
  * Cover: what the gym owes her for training its own clients while the owner was away,
  * priced when the session was completed and carrying HER GST (which she remits).
@@ -24,6 +24,11 @@ use Carbon\CarbonImmutable;
 class GymUsageReportBuilder
 {
     /**
+     * Usage rows carry the hourly `rate` and the pro-rated `amount` separately: the rate
+     * explains the charge, the amount is the charge. Months finalized before usage went
+     * hourly have neither `minutes` nor `amount`, so anything reading a stored snapshot
+     * must cope with both being absent.
+     *
      * @return array{gym: array<string, mixed>, period: string, label: string, rows: list<array<string, mixed>>, summary: array<string, mixed>, unassigned: int}
      */
     public function build(Gym $gym, int $year, int $month): array
@@ -45,11 +50,14 @@ class GymUsageReportBuilder
         $byPeople = [];
         $usage = 0.0;
         $people = 0;
+        $minutes = 0;
         $excluded = 0;
 
         foreach ($sessions as $session) {
             $count = $session->headcount();
+            $length = (int) $session->duration_minutes;
             $rate = $gym->rateFor($count);
+            $amount = $gym->chargeFor($count, $length);
             $billable = (bool) $session->gym_billable;
 
             $rows[] = [
@@ -59,7 +67,9 @@ class GymUsageReportBuilder
                 'service' => $session->service->name,
                 'attendees' => $session->peopleNames(),
                 'people' => $count,
+                'minutes' => $length,
                 'rate' => $rate,
+                'amount' => $amount,
                 'billable' => $billable,
             ];
 
@@ -70,10 +80,15 @@ class GymUsageReportBuilder
             }
 
             $people += $count;
-            $usage = round($usage + ($rate ?? 0), 2);
-            $byPeople[$count] ??= ['sessions' => 0, 'rate' => $rate, 'amount' => 0.0];
+            $minutes += $length;
+            $usage = round($usage + ($amount ?? 0), 2);
+            // Summed from the rows, never recomputed from the hourly rate: rounding each
+            // session and rounding their total are not the same number, and the summary
+            // has to tie out against the detail table it sits above.
+            $byPeople[$count] ??= ['sessions' => 0, 'rate' => $rate, 'minutes' => 0, 'amount' => 0.0];
             $byPeople[$count]['sessions']++;
-            $byPeople[$count]['amount'] = round($byPeople[$count]['amount'] + ($rate ?? 0), 2);
+            $byPeople[$count]['minutes'] += $length;
+            $byPeople[$count]['amount'] = round($byPeople[$count]['amount'] + ($amount ?? 0), 2);
         }
 
         ksort($byPeople);
@@ -109,6 +124,7 @@ class GymUsageReportBuilder
                 'sessions' => count($rows) - $excluded,
                 'sessions_excluded' => $excluded,
                 'people' => $people,
+                'minutes' => $minutes,
                 'by_people' => $byPeople,
                 'usage_subtotal' => $usage,
                 'monthly_fee' => $monthlyFee,

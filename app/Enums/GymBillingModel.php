@@ -12,8 +12,8 @@ enum GymBillingModel: string
     {
         return match ($this) {
             self::Monthly => 'Monthly rate only',
-            self::MonthlyPlusUsage => 'Monthly rate + per-session usage',
-            self::Usage => 'Per-session usage only',
+            self::MonthlyPlusUsage => 'Monthly rate + hourly usage',
+            self::Usage => 'Hourly usage only',
         };
     }
 
@@ -21,8 +21,8 @@ enum GymBillingModel: string
     {
         return match ($this) {
             self::Monthly => 'A flat fee each month; sessions are tracked but not charged individually.',
-            self::MonthlyPlusUsage => 'A flat fee each month plus a charge per session based on group size.',
-            self::Usage => 'Only a charge per session based on group size.',
+            self::MonthlyPlusUsage => 'A flat fee each month plus an hourly charge for each session, based on group size and how long it runs.',
+            self::Usage => 'Only an hourly charge for each session, based on group size and how long it runs.',
         };
     }
 

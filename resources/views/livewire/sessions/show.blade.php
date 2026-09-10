@@ -252,6 +252,11 @@
                             <flux:select.option value="{{ $gym->id }}">{{ $gym->name }}{{ $gym->active ? '' : ' (inactive)' }}</flux:select.option>
                         @endforeach
                     </flux:select>
+                    @if ($gymCharge && $gymCharge['charges'] && $gymCharge['amount'] !== null)
+                        <p class="mt-2 text-xs {{ $session->gym_billable ? 'text-zinc-500' : 'text-zinc-400 line-through' }}">
+                            Costs you {{ money($gymCharge['amount']) }} — {{ money($gymCharge['rate']) }}/hour × {{ $gymCharge['minutes'] }} min, before GST.{{ $session->gym_billable ? '' : ' Not counted.' }}
+                        </p>
+                    @endif
                 </div>
                 @if ($session->isCover())
                     <flux:checkbox :checked="$session->gym_billable" wire:click="toggleGymBillable" label="Credited on the gym statement" description="Untick to leave this session off the gym's statement. It stops counting as revenue too." />

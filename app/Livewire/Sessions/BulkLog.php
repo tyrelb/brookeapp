@@ -7,6 +7,7 @@ use App\Actions\SendSessionReceipts;
 use App\Exceptions\BillingException;
 use App\Livewire\Sessions\Concerns\PicksAttendees;
 use App\Livewire\Sessions\Concerns\PreviewsCharges;
+use App\Livewire\Sessions\Concerns\PreviewsGymCharge;
 use App\Models\Client;
 use App\Models\Gym;
 use App\Models\Service;
@@ -26,7 +27,7 @@ use Livewire\Component;
 #[Title('Bulk log sessions')]
 class BulkLog extends Component
 {
-    use PicksAttendees, PreviewsCharges;
+    use PicksAttendees, PreviewsCharges, PreviewsGymCharge;
 
     public string $service_id = '';
 
@@ -269,14 +270,19 @@ class BulkLog extends Component
             $days[] = $day;
         }
 
+        $gyms = Gym::query()->active()->orderBy('name')->get();
+        $gymCharge = $this->previewGymCharge($gyms->firstWhere('id', (int) $this->gym_id), $preview, $this->duration_minutes);
+
         return view('livewire.sessions.bulk-log', [
             'services' => $this->services(),
-            'gyms' => Gym::query()->active()->orderBy('name')->get(),
+            'gyms' => $gyms,
             'candidates' => $this->candidateClients(),
             'selected' => $selected,
             'preview' => $preview,
             'perSession' => $preview['total'],
             'grandTotal' => round($preview['total'] * count($this->dates), 2),
+            'gymCharge' => $gymCharge,
+            'gymGrandTotal' => $gymCharge === null || $gymCharge['amount'] === null ? null : round($gymCharge['amount'] * count($this->dates), 2),
             'weeks' => array_chunk($days, 7),
             'month' => $anchor->month,
             'monthLabel' => $anchor->format('F Y'),

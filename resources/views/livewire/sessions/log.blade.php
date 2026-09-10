@@ -214,6 +214,38 @@
                         </table>
                     </div>
                 @endif
+
+                {{-- What the room costs the trainer. Deliberately its own block, outside the
+                     client table: this is money out, and it must never read as a client charge.
+                     Hidden for cover sessions, which the gym usage report leaves out entirely. --}}
+                @if ($gymCharge && ! $cover)
+                    @if (! $gymCharge['charges'])
+                        <p class="mt-4 text-xs text-zinc-500">{{ $gymCharge['name'] }} charges a flat monthly rate — this session adds nothing.</p>
+                    @elseif ($gymCharge['people'] < 1)
+                        <p class="mt-4 text-xs text-zinc-500">Add clients to see what {{ $gymCharge['name'] }} charges you.</p>
+                    @elseif ($gymCharge['rate'] === null)
+                        <p class="mt-4 text-xs text-zinc-500">No hourly rate set for {{ $gymCharge['name'] }} at this group size — <a href="{{ route('settings.gyms') }}" wire:navigate class="underline">add one</a>.</p>
+                    @else
+                        <div class="mt-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-800/60 dark:bg-amber-900/20">
+                            <div class="min-w-0">
+                                <div class="flex items-center gap-1.5 text-sm font-medium text-amber-900 dark:text-amber-200">
+                                    <flux:icon.building-office-2 variant="micro" />
+                                    You pay {{ $gymCharge['name'] }}
+                                </div>
+                                <div class="mt-0.5 text-xs text-amber-800/80 dark:text-amber-200/70">
+                                    {{ money($gymCharge['rate']) }}/hour
+                                    @if ($gymCharge['minutes'] !== null)
+                                        &times; {{ $gymCharge['minutes'] }} min
+                                    @endif
+                                    · before GST · not billed to clients
+                                </div>
+                            </div>
+                            <div class="shrink-0 text-right tabular-nums font-medium text-amber-900 dark:text-amber-200">
+                                {{ $gymCharge['amount'] === null ? '—' : money($gymCharge['amount']) }}
+                            </div>
+                        </div>
+                    @endif
+                @endif
             </div>
         </section>
         @endif

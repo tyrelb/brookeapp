@@ -13,6 +13,7 @@ use App\Actions\SendSessionReceipts;
 use App\Enums\SessionStatus;
 use App\Exceptions\BillingException;
 use App\Livewire\Sessions\Concerns\PreviewsCharges;
+use App\Livewire\Sessions\Concerns\PreviewsGymCharge;
 use App\Livewire\Sessions\Concerns\SelectsMembers;
 use App\Models\Client;
 use App\Models\Gym;
@@ -26,7 +27,7 @@ use Livewire\Component;
 
 class Show extends Component
 {
-    use PreviewsCharges, SelectsMembers;
+    use PreviewsCharges, PreviewsGymCharge, SelectsMembers;
 
     public TrainingSession $trainingSession;
 
@@ -465,6 +466,8 @@ class Show extends Component
             'services' => Service::query()->where('active', true)->orderBy('name')->get(),
             'gyms' => Gym::query()->orderByDesc('active')->orderBy('name')->get(),
             'preview' => $session->isScheduled() ? $this->previewCharges($session->service, $selected) : null,
+            // Real persisted values, so this is the charge itself rather than a preview of one.
+            'gymCharge' => $session->isCover() ? null : $this->gymChargeFor($session->gym, $session->headcount(), $session->duration_minutes),
             'following' => $following,
         ])->title($session->service->name.' — '.$session->starts_at->format('M j, Y'));
     }

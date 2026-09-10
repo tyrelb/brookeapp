@@ -99,7 +99,7 @@ class Gyms extends Component
             'active' => ['boolean'],
             'notes' => ['nullable', 'string', 'max:1000'],
         ], [
-            'rates.1.required' => 'Enter at least the rate for one person.',
+            'rates.1.required' => 'Enter at least the hourly rate for one person.',
             'coverRates.1.required' => 'Enter at least what the gym pays you for one person.',
             'monthly_fee.required' => 'Enter the monthly rate for this billing model.',
         ]);

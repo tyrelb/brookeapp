@@ -26,7 +26,7 @@
     </x-page-header>
 
     @if (! $currentGym)
-        <x-empty-state title="No gym set up yet" description="Add the gym you train at, with its monthly rate and per-session rates, and this report will show what you owe each month.">
+        <x-empty-state title="No gym set up yet" description="Add the gym you train at, with its monthly rate and hourly usage rates, and this report will show what you owe each month.">
             <flux:button :href="route('settings.gyms')" variant="primary" wire:navigate>Add a gym</flux:button>
         </x-empty-state>
     @else
@@ -75,20 +75,23 @@
         <div class="grid gap-6 lg:grid-cols-2">
             <section class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:heading>Summary by group size</flux:heading>
+                <flux:subheading class="mt-1">Charged by the hour, pro-rated to each session's length.</flux:subheading>
                 <table class="mt-3 w-full text-sm">
                     <thead class="text-xs text-zinc-500">
-                        <tr><th class="py-1 text-left font-normal">Group size</th><th class="py-1 text-right font-normal">Sessions</th><th class="py-1 text-right font-normal">Rate</th><th class="py-1 text-right font-normal">Amount</th></tr>
+                        <tr><th class="py-1 text-left font-normal">Group size</th><th class="py-1 text-right font-normal">Sessions</th><th class="py-1 text-right font-normal">Hours</th><th class="py-1 text-right font-normal">Rate/hour</th><th class="py-1 text-right font-normal">Amount</th></tr>
                     </thead>
                     <tbody>
                         @forelse ($s['by_people'] as $size => $row)
                             <tr class="border-t border-zinc-100 dark:border-zinc-800">
                                 <td class="py-1.5">{{ $size }} {{ Str::plural('person', $size) }}</td>
                                 <td class="py-1.5 text-right tabular-nums">{{ $row['sessions'] }}</td>
+                                {{-- Months finalized before usage went hourly have no minutes recorded. --}}
+                                <td class="py-1.5 text-right tabular-nums">{{ isset($row['minutes']) ? number_format($row['minutes'] / 60, 2) : '—' }}</td>
                                 <td class="py-1.5 text-right tabular-nums">{{ $row['rate'] === null ? '—' : money($row['rate']) }}</td>
                                 <td class="py-1.5 text-right tabular-nums">{{ money($row['amount']) }}</td>
                             </tr>
                         @empty
-                            <tr><td colspan="4" class="py-3 text-sm text-zinc-500">No counted sessions this month.</td></tr>
+                            <tr><td colspan="5" class="py-3 text-sm text-zinc-500">No counted sessions this month.</td></tr>
                         @endforelse
                     </tbody>
                 </table>
@@ -135,6 +138,8 @@
                                 <th class="px-3 py-2 text-left font-normal">Time</th>
                                 <th class="px-3 py-2 text-left font-normal">Session</th>
                                 <th class="px-3 py-2 text-right font-normal"># of people</th>
+                                <th class="px-3 py-2 text-right font-normal">Length</th>
+                                <th class="px-3 py-2 text-right font-normal">Rate/hour</th>
                                 <th class="px-3 py-2 text-right font-normal">$ for the session</th>
                             </tr>
                         </thead>
@@ -151,7 +156,11 @@
                                         <div class="text-xs text-zinc-500">{{ implode(', ', $row['attendees']) }}</div>
                                     </td>
                                     <td class="px-3 py-2 text-right tabular-nums">{{ $row['people'] }}</td>
+                                    <td class="px-3 py-2 text-right tabular-nums">{{ isset($row['minutes']) ? $row['minutes'].' min' : '—' }}</td>
                                     <td class="px-3 py-2 text-right tabular-nums">{{ $row['rate'] === null ? '—' : money($row['rate']) }}</td>
+                                    {{-- Snapshots taken before usage went hourly only have the flat rate, which was the charge. --}}
+                                    @php($amount = $row['amount'] ?? $row['rate'])
+                                    <td class="px-3 py-2 text-right tabular-nums">{{ $amount === null ? '—' : money($amount) }}</td>
                                 </tr>
                             @endforeach
                         </tbody>
@@ -160,15 +169,17 @@
                                 <td class="px-3 py-2 print:hidden"></td>
                                 <td class="px-3 py-2" colspan="3">Total · {{ $s['sessions'] }} {{ Str::plural('session', $s['sessions']) }}{{ $s['sessions_excluded'] ? ' ('.$s['sessions_excluded'].' excluded)' : '' }}</td>
                                 <td class="px-3 py-2 text-right tabular-nums">{{ $s['people'] }}</td>
+                                <td class="px-3 py-2 text-right tabular-nums">{{ isset($s['minutes']) ? number_format($s['minutes'] / 60, 2).' hrs' : '—' }}</td>
+                                <td class="px-3 py-2"></td>
                                 <td class="px-3 py-2 text-right tabular-nums">{{ money($s['usage_subtotal']) }}</td>
                             </tr>
                             @if ($s['monthly_fee'] !== null)
-                                <tr><td class="print:hidden"></td><td class="px-3 py-1" colspan="4">Monthly rate</td><td class="px-3 py-1 text-right tabular-nums">{{ money($s['monthly_fee']) }}</td></tr>
+                                <tr><td class="print:hidden"></td><td class="px-3 py-1" colspan="6">Monthly rate</td><td class="px-3 py-1 text-right tabular-nums">{{ money($s['monthly_fee']) }}</td></tr>
                             @endif
                             @if ($report['gym']['charges_gst'])
-                                <tr><td class="print:hidden"></td><td class="px-3 py-1" colspan="4">GST</td><td class="px-3 py-1 text-right tabular-nums">{{ money($s['gst']) }}</td></tr>
+                                <tr><td class="print:hidden"></td><td class="px-3 py-1" colspan="6">GST</td><td class="px-3 py-1 text-right tabular-nums">{{ money($s['gst']) }}</td></tr>
                             @endif
-                            <tr class="font-semibold"><td class="print:hidden"></td><td class="px-3 py-2" colspan="4">{{ $coverRows ? 'Usage total' : 'Total owed to '.$currentGym->name }}</td><td class="px-3 py-2 text-right tabular-nums">{{ money($s['total']) }}</td></tr>
+                            <tr class="font-semibold"><td class="print:hidden"></td><td class="px-3 py-2" colspan="6">{{ $coverRows ? 'Usage total' : 'Total owed to '.$currentGym->name }}</td><td class="px-3 py-2 text-right tabular-nums">{{ money($s['total']) }}</td></tr>
                         </tfoot>
                     </table>
                 </div>
