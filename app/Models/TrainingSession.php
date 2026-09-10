@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\SessionStatus;
 use App\Models\Concerns\BelongsToTrainer;
+use App\Support\CoverNames;
 use Carbon\Carbon;
 use Database\Factories\TrainingSessionFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -25,6 +26,11 @@ class TrainingSession extends Model
         'service_id',
         'gym_id',
         'gym_billable',
+        'gym_cover',
+        'cover_names',
+        'cover_subtotal',
+        'cover_gst_amount',
+        'cover_gst_rate',
         'session_series_id',
         'starts_at',
         'duration_minutes',
@@ -44,6 +50,11 @@ class TrainingSession extends Model
             'status' => SessionStatus::class,
             'duration_minutes' => 'integer',
             'gym_billable' => 'boolean',
+            'gym_cover' => 'boolean',
+            'cover_names' => 'array',
+            'cover_subtotal' => 'decimal:2',
+            'cover_gst_amount' => 'decimal:2',
+            'cover_gst_rate' => 'decimal:2',
             'ics_sequence' => 'integer',
             'invites_sent_at' => 'datetime',
         ];
@@ -102,7 +113,21 @@ class TrainingSession extends Model
      */
     public function headcount(): int
     {
+        if ($this->isCover()) {
+            return $this->coverPeople();
+        }
+
         return (int) $this->attendees->sum(fn (SessionAttendee $attendee) => $attendee->peopleCount());
+    }
+
+    /**
+     * How many people the gym counts for usage: attendee rows that turned up.
+     * Deliberately not headcount() — the gym rents space to a booking, so a family
+     * client is one person on the gym's rate card even when four of them trained.
+     */
+    public function gymHeadcount(): int
+    {
+        return $this->attendees->where('attended', true)->count();
     }
 
     /**
@@ -112,10 +137,45 @@ class TrainingSession extends Model
      */
     public function peopleNames(): array
     {
+        if ($this->isCover()) {
+            return $this->coverNames();
+        }
+
         return $this->attendees
             ->flatMap(fn (SessionAttendee $attendee) => $attendee->attended ? $attendee->peopleNames() : [])
             ->values()
             ->all();
+    }
+
+    /**
+     * A session where the trainer covered the gym's own clients: the gym pays her,
+     * she owes it nothing for the space, and no client wallet is touched.
+     */
+    public function isCover(): bool
+    {
+        return (bool) $this->gym_cover;
+    }
+
+    /** @return list<string> */
+    public function coverNames(): array
+    {
+        return CoverNames::clean($this->cover_names ?? []);
+    }
+
+    public function coverPeople(): int
+    {
+        return count($this->coverNames());
+    }
+
+    /** What the gym owes for this cover session, GST included. */
+    public function coverTotal(): float
+    {
+        return round((float) $this->cover_subtotal + (float) $this->cover_gst_amount, 2);
+    }
+
+    public function scopeCover(Builder $query, bool $cover = true): Builder
+    {
+        return $query->where('gym_cover', $cover);
     }
 
     public function isCompleted(): bool

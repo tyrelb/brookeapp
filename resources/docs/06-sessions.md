@@ -29,6 +29,25 @@ Click **Log session** on the dashboard, the Sessions page, or a client's page.
 
 > **Important:** If a client's plan has no rate for the service, the form says so instead of guessing, and will not charge until you add the rate to the plan or use an override.
 
+## Covering a gym's own clients
+
+When the gym owner goes on vacation and asks you to train **their** clients, the money runs backwards: the gym pays you, and you owe it nothing for the space.
+
+Set up what the gym pays you first, in **Settings → Gyms** (see Settings). Once that is saved, a tick box appears on **Log session** and **Book session**:
+
+1. Tick **I'm covering the gym's own clients.**
+2. Pick the gym you are covering for. This is required even if you only have one gym, because the credit has to land on that gym's statement.
+3. Type the names of the people you trained, one per line, using **Add another person** for more. **How many names you type is what sets the rate** — one person might be $50, two might be $70.
+4. The green line shows what the gym will owe you, GST included, before you save.
+
+These names are plain text. They are not clients, they get no wallet, no ledger entry and no email, and they never appear in your client list — which is the point, since the gym's clients change every time.
+
+The fee is worked out and stored when the session is completed, so changing the rate card later never restates a month you have already reported on. Reopening a cover session clears the fee and keeps the names; completing it again re-prices at the current rate.
+
+Cover sessions show up in three places: on that gym's usage report as a credit that reduces what you owe, in **Reports → Monthly** and **Annual** as revenue and GST you charged, and on your dashboard's revenue figure.
+
+> **Note:** A cover session cannot also include your own clients. If you trained a mix, log two sessions — otherwise it is ambiguous whether you owe the gym usage for your own client that hour.
+
 ## The Sessions list
 
 **Sessions** in the sidebar lists everything you have logged or booked, newest first.

@@ -54,3 +54,4 @@ You are logged out and cannot log in, and your clients' wallet links stop workin
 | **Cash basis** | GST counted when the money is received. |
 | **Wallet link** | A client's private, password-free page showing their balance, bookings and history. |
 | **Finalize** | Lock a gym's month so the usage report matches the invoice you paid. |
+| **Cover session** | A session where you trained the gym's own clients while the owner was away. The gym pays you a fixed fee by group size, you owe it nothing for the space, and no client is charged. |

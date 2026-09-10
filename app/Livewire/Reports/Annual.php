@@ -44,7 +44,7 @@ class Annual extends Component
             fputcsv($out, ['Generated', now()->toDateTimeString()]);
             fputcsv($out, []);
 
-            $headers = ['Month', 'Sessions', 'Attendances', 'Session revenue (before GST)', 'Monthly fees (before GST)', 'Revenue (before GST)', 'GST charged', 'Revenue incl. GST'];
+            $headers = ['Month', 'Sessions', 'Attendances', 'Session revenue (before GST)', 'Monthly fees (before GST)', 'Gym cover fees (before GST)', 'Revenue (before GST)', 'GST charged', 'Revenue incl. GST'];
             foreach (PaymentMethod::cases() as $method) {
                 $headers[] = "Received: {$method->label()}";
             }
@@ -61,6 +61,7 @@ class Annual extends Component
                     $row['sessions']['attendances'],
                     $row['revenue']['sessions'],
                     $row['revenue']['monthly_fees'],
+                    $row['revenue']['cover_fees'],
                     $row['revenue']['total'],
                     $row['revenue']['gst'],
                     $row['revenue']['total_with_gst'],

@@ -11,7 +11,7 @@
 
     <form wire:submit="save({{ $isBooking ? 'false' : 'true' }})" class="space-y-8">
         <section class="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-            @if ($gyms->count() > 1)
+            @if ($gyms->count() > 1 || $cover)
                 <div class="sm:col-span-2 lg:col-span-4">
                     <flux:select wire:model.live="gym_id" label="Gym" description="Where this session happens; used for the gym usage report. Pre-filled from the first client's default gym.">
                         <flux:select.option value="">Choose a gym…</flux:select.option>
@@ -56,6 +56,58 @@
             @endif
         </section>
 
+        @if ($coverGyms->isNotEmpty())
+            <section class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:checkbox wire:model.live="cover"
+                    label="I'm covering the gym's own clients"
+                    description="For when the gym owner is away. The gym pays you for the session, you owe it nothing, and no client wallet is touched." />
+            </section>
+        @endif
+
+        @if ($cover)
+            <section class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
+                <flux:heading>Who you trained</flux:heading>
+                <flux:subheading>The gym's clients, by name. How many you name is what sets the rate.</flux:subheading>
+
+                <div class="mt-3 max-w-md space-y-2">
+                    @foreach ($coverNames as $i => $name)
+                        <div class="flex items-center gap-2">
+                            <flux:input wire:model.live.debounce.400ms="coverNames.{{ $i }}" wire:key="cover-name-{{ $i }}" placeholder="Name" class="flex-1" />
+                            @if (count($coverNames) > 1)
+                                <flux:button type="button" wire:click="removeCoverName({{ $i }})" variant="subtle" size="sm" icon="x-mark" inset aria-label="Remove" />
+                            @endif
+                        </div>
+                    @endforeach
+                </div>
+
+                @if (count($coverNames) < 10)
+                    <flux:button type="button" wire:click="addCoverName" variant="ghost" size="sm" icon="plus" class="mt-2">Add another person</flux:button>
+                @endif
+
+                @error('coverNames') <flux:error name="coverNames">{{ $message }}</flux:error> @enderror
+
+                @if ($coverPreview)
+                    <div class="mt-4">
+                        @if ($coverPreview['error'])
+                            {{-- Nothing typed yet is not a problem worth shouting about. --}}
+                            @if ($coverPreview['fix_in_settings'] ?? false)
+                                <flux:callout variant="warning" icon="exclamation-triangle">
+                                    <flux:callout.text>
+                                        {{ $coverPreview['error'] }}
+                                        <flux:link :href="route('settings.gyms')" wire:navigate>Settings → Gyms</flux:link>
+                                    </flux:callout.text>
+                                </flux:callout>
+                            @endif
+                        @else
+                            <div class="rounded-lg bg-emerald-50 px-4 py-3 text-sm dark:bg-emerald-950/40">
+                                <span class="font-medium">{{ $coverPreview['people'] }} {{ Str::plural('person', $coverPreview['people']) }} · {{ money($coverPreview['subtotal']) }}@if ($coverPreview['gst'] > 0) + {{ money($coverPreview['gst']) }} GST = {{ money($coverPreview['total']) }}@endif</span>
+                                <span class="text-zinc-600 dark:text-zinc-400">· credited to you on {{ $coverPreview['gym']->name }}'s statement</span>
+                            </div>
+                        @endif
+                    </div>
+                @endif
+            </section>
+        @else
         <section class="grid gap-6 lg:grid-cols-5">
             <div class="lg:col-span-2">
                 <flux:heading>Add clients</flux:heading>
@@ -164,8 +216,9 @@
                 @endif
             </div>
         </section>
+        @endif
 
-        @if ($isBooking)
+        @if ($isBooking && ! $cover)
             <section class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900">
                 <flux:checkbox wire:model.live="repeat" label="Repeat this booking" description="Books one session per date, all with the same clients. Every repeat needs an end date." />
                 @if ($repeat)
@@ -203,7 +256,7 @@
             </section>
         @endif
 
-        <section>
+        <section @if ($cover) hidden @endif>
             @if ($isBooking)
                 <flux:checkbox wire:model="sendInvites" label="Email attendees a calendar invite" description="Includes an .ics they can accept, plus your booking instructions for changes. Clients without an email address are skipped." />
             @else
@@ -216,7 +269,7 @@
                 <flux:button type="submit" variant="primary" icon="calendar">{{ ($repeat && $repeatPreview && ! $repeatPreview['error'] ? 'Book '.$repeatPreview['count'].' '.Str::plural('session', $repeatPreview['count']) : 'Book session').($conflicts->isNotEmpty() || $repeatConflicts > 0 ? ' anyway' : '') }}</flux:button>
                 <flux:button :href="route('sessions.calendar', ['date' => $date])" variant="ghost" wire:navigate>Cancel</flux:button>
             @else
-                <flux:button type="submit" variant="primary" icon="check">Complete &amp; charge</flux:button>
+                <flux:button type="submit" variant="primary" icon="check">{{ $cover ? 'Log cover session' : 'Complete & charge' }}</flux:button>
                 <flux:button type="button" wire:click="save(false)">Save as scheduled</flux:button>
                 <flux:button :href="route('sessions.index')" variant="ghost" wire:navigate>Cancel</flux:button>
             @endif

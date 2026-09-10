@@ -38,6 +38,7 @@ Click **Add gym** (or **Edit** on an existing gym) to open the form.
 - **How does this gym charge you?** Pick one: a monthly rate only, a monthly rate plus a charge per session, or per-session usage only.
 - **Monthly rate (before GST)** when the gym charges a flat fee.
 - **Per-session rate by group size.** One rate for each number of people from 1 to 10. Leave a size blank to use the next smaller size's rate; groups over 10 use the 10-person rate.
+- **This gym pays me to cover its own clients.** Tick this when the owner sometimes goes away and asks you to train their clients. Enter what the gym pays **you** per session, by group size — before **your** GST, because here you are invoicing the gym, not the other way round. This is separate from how the gym bills you: a gym you only pay rent to can still pay you for cover. Leave a size blank to use the next smaller size's rate.
 - **This gym charges GST** and its rate. GST you pay a gym is an input tax credit on your own GST return, so it is tracked separately.
 - **Default gym for new sessions** pre-fills the gym on every session you log or book. You can have up to three active gyms; the first one you add can also be assigned to all your existing sessions in one go.
 - **Active.** Inactive gyms stay in old reports but cannot be picked for new sessions. A gym with sessions or finalized reports cannot be removed, only made inactive.

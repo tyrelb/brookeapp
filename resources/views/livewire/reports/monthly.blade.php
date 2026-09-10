@@ -10,7 +10,7 @@
 
     <div class="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
         <x-stat-card label="Sessions completed" :value="$report['sessions']['count']" :hint="$report['sessions']['attendances'].' attendances'" />
-        <x-stat-card label="Revenue (before GST)" :value="money($report['revenue']['total'])" :hint="'Sessions '.money($report['revenue']['sessions']).' · Monthly fees '.money($report['revenue']['monthly_fees'])" />
+        <x-stat-card label="Revenue (before GST)" :value="money($report['revenue']['total'])" :hint="'Sessions '.money($report['revenue']['sessions']).' · Monthly fees '.money($report['revenue']['monthly_fees']).($report['revenue']['cover_fees'] > 0 ? ' · Gym cover '.money($report['revenue']['cover_fees']) : '')" />
         <x-stat-card label="GST charged" :value="money($report['revenue']['gst'])" :hint="'Revenue incl. GST '.money($report['revenue']['total_with_gst'])" />
         <x-stat-card label="Payments received" :value="money($report['payments']['net'])" :hint="$report['payments']['refunds'] < 0 ? 'After refunds of '.money(abs($report['payments']['refunds'])) : $report['payments']['count'].' payments'" />
     </div>
@@ -42,7 +42,7 @@
                         @endforeach
                     </tbody>
                 </table>
-                <div class="mt-2 text-xs text-zinc-500">Revenue here counts pay-as-you-go charges only; monthly members' sessions are included in their fee.</div>
+                <div class="mt-2 text-xs text-zinc-500">Revenue here counts pay-as-you-go charges and gym cover fees; monthly members' sessions are included in their fee.</div>
             @endif
         </section>
 
@@ -89,6 +89,12 @@
                 <table class="mt-3 w-full text-sm">
                     <tbody>
                         <tr><td class="py-1.5">GST charged on sessions and fees (accrual basis)</td><td class="py-1.5 text-right tabular-nums font-medium">{{ money($report['revenue']['gst']) }}</td></tr>
+                        @if ($report['revenue']['cover_gst'] > 0)
+                            <tr class="border-t border-zinc-100 dark:border-zinc-800">
+                                <td class="py-1.5 text-zinc-500">…of which GST on gym cover fees (settled by credit against the gym's invoice, not cash)</td>
+                                <td class="py-1.5 text-right tabular-nums text-zinc-500">{{ money($report['revenue']['cover_gst']) }}</td>
+                            </tr>
+                        @endif
                         <tr class="border-t border-zinc-100 dark:border-zinc-800"><td class="py-1.5">GST embedded in money received (cash basis)</td><td class="py-1.5 text-right tabular-nums font-medium">{{ money($report['payments']['gst_embedded']) }}</td></tr>
                     </tbody>
                 </table>

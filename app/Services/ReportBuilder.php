@@ -19,6 +19,10 @@ use Carbon\CarbonInterface;
  * Revenue is reported on an accrual basis (charges posted in the period) and money
  * received on a cash basis (payments in the period). GST is shown both ways so the
  * trainer and their accountant can pick the basis they remit on.
+ *
+ * Gym cover fees are accrual revenue too, earned on the day she trained the gym's
+ * clients. They never reach the cash side: the gym settles by crediting the amount
+ * against what she owes it, so no payment is ever received.
  */
 class ReportBuilder
 {
@@ -89,14 +93,24 @@ class ReportBuilder
             ->with(['service', 'attendees.client.plan', 'attendees.members'])
             ->get();
 
+        // Unticking a session on the gym statement means it was never invoiced, so it is
+        // not revenue either. One switch, one meaning — which is what keeps this report
+        // and the gym statement agreeing without either having to know about the other.
+        $coverSessions = $sessions->filter(fn (TrainingSession $s) => $s->isCover() && $s->gym_billable);
+        $coverRevenue = round((float) $coverSessions->sum('cover_subtotal'), 2);
+        $coverGst = round((float) $coverSessions->sum('cover_gst_amount'), 2);
+
         $byService = [];
         foreach ($sessions as $session) {
             $tier = Plan::headcountLabel($session->headcount());
             $name = $session->service->name;
+            $earned = $session->isCover()
+                ? ($session->gym_billable ? (float) $session->cover_subtotal : 0.0)
+                : (float) $session->attendees->where('attended', true)->sum('subtotal');
             $byService[$name] ??= ['sessions' => 0, 'attendances' => 0, 'revenue' => 0.0, 'tiers' => []];
             $byService[$name]['sessions']++;
             $byService[$name]['attendances'] += $session->headcount();
-            $byService[$name]['revenue'] = round($byService[$name]['revenue'] + (float) $session->attendees->where('attended', true)->sum('subtotal'), 2);
+            $byService[$name]['revenue'] = round($byService[$name]['revenue'] + $earned, 2);
             $byService[$name]['tiers'][$tier] = ($byService[$name]['tiers'][$tier] ?? 0) + 1;
         }
         ksort($byService);
@@ -125,9 +139,12 @@ class ReportBuilder
                 'session_charges' => (int) ($sessionCharges->rows_count ?? 0),
                 'monthly_fees' => $feeRevenue,
                 'monthly_fee_count' => (int) ($monthlyFees->rows_count ?? 0),
-                'total' => round($sessionRevenue + $feeRevenue, 2),
-                'gst' => $gstCharged,
-                'total_with_gst' => round($sessionRevenue + $feeRevenue + $gstCharged, 2),
+                'cover_fees' => $coverRevenue,
+                'cover_sessions' => $coverSessions->count(),
+                'cover_gst' => $coverGst,
+                'total' => round($sessionRevenue + $feeRevenue + $coverRevenue, 2),
+                'gst' => round($gstCharged + $coverGst, 2),
+                'total_with_gst' => round($sessionRevenue + $feeRevenue + $coverRevenue + $gstCharged + $coverGst, 2),
             ],
             'payments' => [
                 'by_method' => $byMethod,
@@ -135,6 +152,7 @@ class ReportBuilder
                 'total' => $paymentsTotal,
                 'refunds' => $refundsTotal,
                 'net' => round($paymentsTotal + $refundsTotal, 2),
+                // Cash basis: cover fees are deliberately absent, no money changed hands.
                 'gst_embedded' => round((float) $payments->sum('gst_amount') - (float) $refunds->sum('gst_amount'), 2),
             ],
             'balances' => [

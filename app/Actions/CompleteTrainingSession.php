@@ -9,6 +9,7 @@ use App\Models\Plan;
 use App\Models\SessionAttendee;
 use App\Models\TrainingSession;
 use App\Models\WalletTransaction;
+use App\Services\CoverFeePricer;
 use App\Services\SessionPricer;
 use App\Support\AttendeeLine;
 use Carbon\CarbonInterface;
@@ -22,15 +23,19 @@ use Illuminate\Support\Str;
  */
 class CompleteTrainingSession
 {
-    public function __construct(private SessionPricer $pricer) {}
+    public function __construct(private SessionPricer $pricer, private CoverFeePricer $coverPricer) {}
 
     public function handle(TrainingSession $session, ?CarbonInterface $completedAt = null): TrainingSession
     {
         return DB::transaction(function () use ($session, $completedAt) {
-            $session->loadMissing(['attendees.client.plan.rates', 'attendees.members', 'service', 'trainer']);
+            $session->loadMissing(['attendees.client.plan.rates', 'attendees.members', 'service', 'trainer', 'gym']);
 
             if ($session->isCompleted()) {
                 throw new BillingException('This session has already been completed. Reopen it to make changes.');
+            }
+
+            if ($session->isCover()) {
+                return $this->completeCover($session, $completedAt);
             }
 
             $lines = [];
@@ -81,6 +86,39 @@ class CompleteTrainingSession
 
             return $session->refresh();
         });
+    }
+
+    /**
+     * A cover session bills the gym, not a client: the fee is fixed by how many of the
+     * gym's people were in the room, and it is frozen onto the session here so that
+     * later edits to the rate card or to GST registration cannot restate a month that
+     * has already been reported on.
+     */
+    private function completeCover(TrainingSession $session, ?CarbonInterface $completedAt): TrainingSession
+    {
+        if ($session->gym === null) {
+            throw new BillingException('Pick the gym you covered for before completing this session.');
+        }
+
+        if ($session->attendees->isNotEmpty()) {
+            throw new BillingException("A cover session can't also have your own clients on it. Log them as a separate session.");
+        }
+
+        $priced = $this->coverPricer->price(
+            $session->gym,
+            $session->coverNames(),
+            $session->trainer->effectiveGstRate(),
+        );
+
+        $session->update([
+            'cover_subtotal' => $priced['subtotal'],
+            'cover_gst_amount' => $priced['gst'],
+            'cover_gst_rate' => $priced['gst_rate'],
+            'status' => SessionStatus::Completed,
+            'completed_at' => $completedAt ?? now(),
+        ]);
+
+        return $session->refresh();
     }
 
     /**

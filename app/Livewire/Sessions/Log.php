@@ -14,6 +14,8 @@ use App\Models\Client;
 use App\Models\Gym;
 use App\Models\Service;
 use App\Models\TrainingSession;
+use App\Services\CoverFeePricer;
+use App\Support\CoverNames;
 use App\Support\Recurrence;
 use App\Support\SessionConflicts;
 use Carbon\Carbon;
@@ -52,6 +54,12 @@ class Log extends Component
 
     /** @var array<int, array{attended: bool, override: string, members: array<int, array{attended: bool, override: string}>}> keyed by client id */
     public array $attendees = [];
+
+    /** Covering the gym's own clients: the gym pays her, and no client is charged. */
+    public bool $cover = false;
+
+    /** @var array<int, string> free-text names of the gym's clients */
+    public array $coverNames = [''];
 
     public bool $sendInvites = true;
 
@@ -172,6 +180,51 @@ class Log extends Component
         return count(SessionConflicts::forSlots($slots, (int) $this->duration_minutes));
     }
 
+    public function updatedCover(): void
+    {
+        if ($this->cover) {
+            $this->attendees = [];
+            $this->sendReceipts = false;
+            $this->sendInvites = false;
+            $this->repeat = false;
+        }
+
+        $this->resetErrorBag();
+    }
+
+    public function addCoverName(): void
+    {
+        if (count($this->coverNames) < Gym::MAX_PEOPLE) {
+            $this->coverNames[] = '';
+        }
+    }
+
+    public function removeCoverName(int $index): void
+    {
+        unset($this->coverNames[$index]);
+        $this->coverNames = array_values($this->coverNames) ?: [''];
+    }
+
+    /** @return array<string, mixed> */
+    public function coverPreview(): array
+    {
+        $gym = $this->gym_id !== '' ? Gym::query()->find((int) $this->gym_id) : null;
+
+        if (! $gym) {
+            return ['people' => count(CoverNames::clean($this->coverNames)), 'gym' => null, 'error' => 'Pick the gym you are covering for.'];
+        }
+
+        $names = CoverNames::clean($this->coverNames);
+
+        $preview = app(CoverFeePricer::class)->preview($gym, $names, auth()->user()->effectiveGstRate());
+
+        return $preview + [
+            'gym' => $gym,
+            // Only a missing rate is fixed in Settings; an empty form just needs a name.
+            'fix_in_settings' => $names !== [] && $preview['error'] !== null,
+        ];
+    }
+
     public function updatedServiceId(): void
     {
         if ($service = $this->services()->firstWhere('id', (int) $this->service_id)) {
@@ -185,12 +238,16 @@ class Log extends Component
 
         $this->validate([
             'service_id' => ['required', Rule::exists('services', 'id')->where('user_id', auth()->id())],
-            'gym_id' => [Rule::requiredIf(Gym::query()->active()->exists()), 'nullable', Rule::exists('gyms', 'id')->where('user_id', auth()->id())],
+            // A cover session must name its gym even when there is only one: the credit
+            // has to land on some gym's statement.
+            'gym_id' => [Rule::requiredIf($this->cover || Gym::query()->active()->exists()), 'nullable', Rule::exists('gyms', 'id')->where('user_id', auth()->id())],
             'date' => ['required', 'date'],
             'time' => ['required', 'date_format:H:i'],
             'duration_minutes' => ['required', 'integer', 'min:5', 'max:480'],
             'notes' => ['nullable', 'string', 'max:2000'],
-            'attendees' => ['required', 'array', 'min:1'],
+            'coverNames' => [Rule::requiredIf($this->cover), 'array'],
+            'coverNames.*' => ['nullable', 'string', 'max:'.CoverNames::MAX_LENGTH],
+            'attendees' => [Rule::requiredIf(! $this->cover), 'array', $this->cover ? 'max:0' : 'min:1'],
             'attendees.*.attended' => ['boolean'],
             'attendees.*.override' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'attendees.*.members' => ['array', 'max:'.Client::MAX_MEMBERS],
@@ -209,6 +266,12 @@ class Log extends Component
             'attendees.required' => 'Add at least one client.',
             'attendees.min' => 'Add at least one client.',
         ]);
+
+        if ($this->cover) {
+            $this->saveCover($complete);
+
+            return;
+        }
 
         $clients = Client::query()->with('plan', 'members')->whereIn('id', array_keys($this->attendees))->get()->keyBy('id');
 
@@ -290,6 +353,59 @@ class Log extends Component
         $this->redirectRoute('sessions.show', $session, navigate: true);
     }
 
+    /**
+     * A cover session carries no attendees and posts nothing to a wallet: the money is
+     * owed by the gym, and it is worked out from the names when the session completes.
+     */
+    private function saveCover(bool $complete): void
+    {
+        $names = CoverNames::clean($this->coverNames);
+
+        if ($names === []) {
+            $this->addError('coverNames', 'Add the name of at least one person you trained.');
+
+            return;
+        }
+
+        $gym = Gym::query()->findOrFail((int) $this->gym_id);
+
+        if ($gym->coverRateFor(count($names)) === null) {
+            $this->addError('coverNames', "No cover rate is set for {$gym->name}. Add what they pay you in Settings → Gyms.");
+
+            return;
+        }
+
+        try {
+            $session = DB::transaction(function () use ($complete, $names) {
+                $session = TrainingSession::create([
+                    'service_id' => (int) $this->service_id,
+                    'gym_id' => (int) $this->gym_id,
+                    'gym_cover' => true,
+                    'cover_names' => $names,
+                    'starts_at' => "{$this->date} {$this->time}:00",
+                    'duration_minutes' => (int) $this->duration_minutes,
+                    'status' => SessionStatus::Scheduled,
+                    'notes' => $this->notes ?: null,
+                ]);
+
+                return $complete ? app(CompleteTrainingSession::class)->handle($session) : $session;
+            });
+        } catch (BillingException $e) {
+            $this->addError('coverNames', $e->getMessage());
+
+            return;
+        }
+
+        // Nobody to email: these are the gym's clients, and it books them itself.
+        Flux::toast(
+            $complete
+                ? 'Cover session logged. '.money($session->coverTotal())." credited to you on {$gym->name}'s statement."
+                : 'Cover session booked.',
+            variant: 'success',
+        );
+        $this->redirectRoute('sessions.show', $session, navigate: true);
+    }
+
     private function bookSeries(): void
     {
         $attendees = [];
@@ -347,6 +463,8 @@ class Log extends Component
             'candidates' => $this->candidateClients(),
             'selected' => $selected,
             'preview' => $this->previewCharges($service, $selected),
+            'coverGyms' => Gym::query()->active()->get()->filter->coversSessions(),
+            'coverPreview' => $this->cover ? $this->coverPreview() : null,
             'repeatPreview' => $this->isBooking() && $this->repeat ? $this->repeatPreview() : null,
             'conflicts' => $this->conflicts(),
             'repeatConflicts' => $this->repeatConflictCount(),

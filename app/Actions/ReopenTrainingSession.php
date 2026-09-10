@@ -35,6 +35,11 @@ class ReopenTrainingSession
             $session->update([
                 'status' => SessionStatus::Scheduled,
                 'completed_at' => null,
+                // A reopened cover session must stop earning until it is completed again,
+                // the same way a client's charge is voided above. The names stay put.
+                ...$session->isCover()
+                    ? ['cover_subtotal' => null, 'cover_gst_amount' => null, 'cover_gst_rate' => null]
+                    : [],
             ]);
 
             return $session->refresh();

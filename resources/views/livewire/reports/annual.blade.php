@@ -24,6 +24,7 @@
                     <th class="px-3 py-2 text-right font-normal">Sessions</th>
                     <th class="px-3 py-2 text-right font-normal">Session revenue</th>
                     <th class="px-3 py-2 text-right font-normal">Monthly fees</th>
+                    <th class="px-3 py-2 text-right font-normal">Gym cover</th>
                     <th class="px-3 py-2 text-right font-normal">Revenue</th>
                     <th class="px-3 py-2 text-right font-normal">GST charged</th>
                     @foreach ($methods as $method)
@@ -42,6 +43,7 @@
                         <td class="px-3 py-1.5 text-right tabular-nums">{{ $m['sessions']['count'] }}</td>
                         <td class="px-3 py-1.5 text-right tabular-nums">{{ money($m['revenue']['sessions']) }}</td>
                         <td class="px-3 py-1.5 text-right tabular-nums">{{ money($m['revenue']['monthly_fees']) }}</td>
+                        <td class="px-3 py-1.5 text-right tabular-nums">{{ money($m['revenue']['cover_fees']) }}</td>
                         <td class="px-3 py-1.5 text-right tabular-nums font-medium">{{ money($m['revenue']['total']) }}</td>
                         <td class="px-3 py-1.5 text-right tabular-nums">{{ money($m['revenue']['gst']) }}</td>
                         @foreach ($methods as $method)
@@ -60,6 +62,7 @@
                     <td class="px-3 py-2 text-right tabular-nums">{{ $t['sessions']['count'] }}</td>
                     <td class="px-3 py-2 text-right tabular-nums">{{ money($t['revenue']['sessions']) }}</td>
                     <td class="px-3 py-2 text-right tabular-nums">{{ money($t['revenue']['monthly_fees']) }}</td>
+                    <td class="px-3 py-2 text-right tabular-nums">{{ money($t['revenue']['cover_fees']) }}</td>
                     <td class="px-3 py-2 text-right tabular-nums">{{ money($t['revenue']['total']) }}</td>
                     <td class="px-3 py-2 text-right tabular-nums">{{ money($t['revenue']['gst']) }}</td>
                     @foreach ($methods as $method)

@@ -6,16 +6,20 @@
                 <a href="{{ route('sessions.index', ['series' => $session->session_series_id]) }}" wire:navigate><flux:badge icon="arrow-path" color="purple">{{ $session->series->describe() }}{{ $following ? " · {$following} more" : '' }}</flux:badge></a>
             @endif
             @if ($session->isScheduled())
-                <flux:button variant="primary" icon="check" wire:click="complete">Complete &amp; charge</flux:button>
+                <flux:button variant="primary" icon="check" wire:click="complete">{{ $session->isCover() ? 'Complete session' : 'Complete & charge' }}</flux:button>
                 <flux:modal.trigger name="reschedule"><flux:button icon="clock">Reschedule</flux:button></flux:modal.trigger>
-                <flux:button icon="envelope" wire:click="sendInvites" wire:confirm="Email a calendar invite to every attendee with an email address?">{{ $session->invitesWereSent() ? 'Resend invites' : 'Send invites' }}</flux:button>
+                @unless ($session->isCover())
+                    <flux:button icon="envelope" wire:click="sendInvites" wire:confirm="Email a calendar invite to every attendee with an email address?">{{ $session->invitesWereSent() ? 'Resend invites' : 'Send invites' }}</flux:button>
+                @endunless
                 <flux:button wire:click="cancel" wire:confirm="Cancel this session? No one will be charged.{{ $session->invitesWereSent() ? ' Attendees who received an invite will be emailed a cancellation.' : '' }}">{{ $session->isInSeries() ? 'Cancel this session' : 'Cancel session' }}</flux:button>
                 @if ($session->isInSeries() && $following > 0)
                     <flux:button variant="danger" wire:click="cancelFollowing" wire:confirm="Cancel this session and the {{ $following }} following {{ Str::plural('session', $following) }}? Earlier sessions are untouched. Invited clients get one cancellation email.">Cancel this &amp; following</flux:button>
                 @endif
                 <flux:button variant="ghost" wire:click="delete" wire:confirm="Delete this session entirely?{{ $session->invitesWereSent() ? ' Attendees who received an invite will be emailed a cancellation.' : '' }}">Delete</flux:button>
             @elseif ($session->isCompleted())
-                <flux:button icon="envelope" wire:click="sendReceiptsNow" wire:confirm="Email a receipt to everyone who attended and has an email address?">{{ $session->attendees->whereNotNull('receipt_sent_at')->isNotEmpty() ? 'Resend receipts' : 'Email receipts' }}</flux:button>
+                @unless ($session->isCover())
+                    <flux:button icon="envelope" wire:click="sendReceiptsNow" wire:confirm="Email a receipt to everyone who attended and has an email address?">{{ $session->attendees->whereNotNull('receipt_sent_at')->isNotEmpty() ? 'Resend receipts' : 'Email receipts' }}</flux:button>
+                @endunless
                 <flux:button icon="arrow-uturn-left" wire:click="reopen" wire:confirm="Reopen this session? All charges will be voided so you can correct attendance and complete it again.">Reopen</flux:button>
             @else
                 <flux:button wire:click="uncancel">Restore to scheduled</flux:button>
@@ -33,13 +37,20 @@
     @if ($session->isScheduled())
         <flux:callout icon="information-circle">
             <flux:callout.text>
-                This session hasn't been charged yet. Tick who attended, adjust any price overrides, then <strong>Complete &amp; charge</strong>. The rate tier follows the number of people who attended.
+                @if ($session->isCover())
+                    This session hasn't been credited yet. Check the names below, then <strong>Complete session</strong>. The fee follows how many people you trained, and is fixed at that point.
+                @else
+                    This session hasn't been charged yet. Tick who attended, adjust any price overrides, then <strong>Complete &amp; charge</strong>. The rate tier follows the number of people who attended.
+                @endif
                 @if ($session->invitesWereSent())
                     Calendar invites were sent {{ $session->invites_sent_at->diffForHumans() }}; rescheduling or cancelling will email an update automatically.
                 @endif
             </flux:callout.text>
         </flux:callout>
 
+        @if ($session->isCover())
+            @include('livewire.sessions.partials.cover-panel')
+        @else
         <section class="grid gap-6 lg:grid-cols-5">
             <div class="lg:col-span-3">
                 <div class="flex items-center justify-between">
@@ -107,7 +118,9 @@
                     <flux:button wire:click="saveAttendance">Save</flux:button>
                 </div>
                 <div class="mt-3">
-                    <flux:checkbox wire:model="sendReceipts" label="Email attendees a receipt when completed" description="Shows the charge and their remaining balance." />
+                    @unless ($session->isCover())
+                        <flux:checkbox wire:model="sendReceipts" label="Email attendees a receipt when completed" description="Shows the charge and their remaining balance." />
+                    @endunless
                 </div>
                 @if ($session->isInSeries() && $following > 0)
                     <div class="mt-3">
@@ -171,7 +184,11 @@
                 </div>
             </form>
         </flux:modal>
+        @endif
     @else
+        @if ($session->isCover())
+            @include('livewire.sessions.partials.cover-panel')
+        @else
         <section>
             <flux:heading class="mb-2">Attendees</flux:heading>
             <flux:table>
@@ -221,6 +238,7 @@
                 <flux:text class="mt-3 whitespace-pre-line text-sm">{{ $session->notes }}</flux:text>
             @endif
         </section>
+        @endif
     @endif
     @if ($gyms->isNotEmpty())
         <section class="rounded-xl border border-zinc-200 bg-white p-4 dark:border-zinc-700 dark:bg-zinc-900 print:hidden">
@@ -235,7 +253,11 @@
                         @endforeach
                     </flux:select>
                 </div>
-                <flux:checkbox :checked="$session->gym_billable" wire:click="toggleGymBillable" label="Counts toward gym usage" description="Untick if the gym shouldn't charge for this session." />
+                @if ($session->isCover())
+                    <flux:checkbox :checked="$session->gym_billable" wire:click="toggleGymBillable" label="Credited on the gym statement" description="Untick to leave this session off the gym's statement. It stops counting as revenue too." />
+                @else
+                    <flux:checkbox :checked="$session->gym_billable" wire:click="toggleGymBillable" label="Counts toward gym usage" description="Untick if the gym shouldn't charge for this session." />
+                @endif
             </div>
         </section>
     @endif

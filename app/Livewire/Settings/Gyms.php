@@ -25,6 +25,12 @@ class Gyms extends Component
     /** @var array<int, string> people => price */
     public array $rates = [];
 
+    /** Whether this gym pays the trainer to cover its own clients. */
+    public bool $covers_clients = false;
+
+    /** @var array<int, string> people => what the gym pays her, before HER GST */
+    public array $coverRates = [];
+
     public bool $charges_gst = true;
 
     public string $gst_rate = '5.00';
@@ -59,6 +65,11 @@ class Gyms extends Component
             $price = $gym->usage_rates[$n] ?? $gym->usage_rates[(string) $n] ?? null;
             $this->rates[$n] = $price !== null && $price !== '' ? number_format((float) $price, 2, '.', '') : '';
         }
+        $this->covers_clients = $gym->coversSessions();
+        foreach (range(1, Gym::MAX_PEOPLE) as $n) {
+            $price = $gym->cover_rates[$n] ?? $gym->cover_rates[(string) $n] ?? null;
+            $this->coverRates[$n] = $price !== null && $price !== '' ? number_format((float) $price, 2, '.', '') : '';
+        }
         $this->charges_gst = $gym->charges_gst;
         $this->gst_rate = number_format((float) $gym->gst_rate, 2, '.', '');
         $this->is_default = $gym->is_default;
@@ -78,6 +89,10 @@ class Gyms extends Component
             'rates' => ['array'],
             'rates.*' => ['nullable', 'numeric', 'min:0', 'max:10000'],
             'rates.1' => [Rule::requiredIf($model?->includesUsage() ?? false), 'nullable', 'numeric'],
+            'covers_clients' => ['boolean'],
+            'coverRates' => ['array'],
+            'coverRates.*' => ['nullable', 'numeric', 'min:0', 'max:10000'],
+            'coverRates.1' => [Rule::requiredIf($this->covers_clients), 'nullable', 'numeric'],
             'charges_gst' => ['boolean'],
             'gst_rate' => ['required', 'numeric', 'min:0', 'max:30'],
             'is_default' => ['boolean'],
@@ -85,6 +100,7 @@ class Gyms extends Component
             'notes' => ['nullable', 'string', 'max:1000'],
         ], [
             'rates.1.required' => 'Enter at least the rate for one person.',
+            'coverRates.1.required' => 'Enter at least what the gym pays you for one person.',
             'monthly_fee.required' => 'Enter the monthly rate for this billing model.',
         ]);
 
@@ -103,11 +119,21 @@ class Gyms extends Component
             }
         }
 
+        $coverRates = [];
+        foreach ($data['coverRates'] as $people => $price) {
+            if ($price !== null && $price !== '' && (int) $people >= 1 && (int) $people <= Gym::MAX_PEOPLE) {
+                $coverRates[(int) $people] = round((float) $price, 2);
+            }
+        }
+
         $attributes = [
             'name' => $data['name'],
             'billing_model' => $model,
             'monthly_fee' => $model->includesMonthly() ? round((float) $data['monthly_fee'], 2) : null,
             'usage_rates' => $model->includesUsage() ? $rates : null,
+            // Deliberately not gated on the billing model, unlike usage_rates above:
+            // a gym she only pays rent to can still pay her to cover its clients.
+            'cover_rates' => $this->covers_clients ? $coverRates : null,
             'charges_gst' => $data['charges_gst'],
             'gst_rate' => round((float) $data['gst_rate'], 2),
             'is_default' => $data['is_default'] && $data['active'],
@@ -168,10 +194,15 @@ class Gyms extends Component
 
     private function resetForm(): void
     {
-        $this->reset('editingId', 'name', 'billing_model', 'monthly_fee', 'charges_gst', 'gst_rate', 'is_default', 'active', 'notes', 'assignExisting');
+        $this->reset('editingId', 'name', 'billing_model', 'monthly_fee', 'charges_gst', 'gst_rate', 'is_default', 'active', 'notes', 'assignExisting', 'covers_clients');
         $this->rates = [];
         foreach (Gym::DEFAULT_RATES as $people => $price) {
             $this->rates[$people] = number_format($price, 2, '.', '');
+        }
+        // Blank above 2: an unset tier falls back to the nearest lower rate.
+        $this->coverRates = array_fill_keys(range(1, Gym::MAX_PEOPLE), '');
+        foreach (Gym::DEFAULT_COVER_RATES as $people => $price) {
+            $this->coverRates[$people] = number_format($price, 2, '.', '');
         }
         $this->resetErrorBag();
     }

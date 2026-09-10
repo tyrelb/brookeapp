@@ -20,6 +20,8 @@ class TrainingSessionFactory extends Factory
             'service_id' => fn (array $attributes) => Service::factory()->create(['user_id' => $attributes['user_id']])->id,
             'gym_id' => null,
             'gym_billable' => true,
+            'gym_cover' => false,
+            'cover_names' => null,
             'session_series_id' => null,
             'starts_at' => now()->startOfHour(),
             'duration_minutes' => 60,
@@ -27,6 +29,12 @@ class TrainingSessionFactory extends Factory
             'completed_at' => null,
             'notes' => null,
         ];
+    }
+
+    /** @param  list<string>  $names */
+    public function cover(array $names = ['Guest One']): static
+    {
+        return $this->state(fn () => ['gym_cover' => true, 'cover_names' => $names]);
     }
 
     public function completed(): static

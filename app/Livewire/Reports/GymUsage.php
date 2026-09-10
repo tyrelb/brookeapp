@@ -146,6 +146,34 @@ class GymUsage extends Component
             fputcsv($out, ['Subtotal', number_format($summary['subtotal'], 2, '.', '')]);
             fputcsv($out, ['GST', number_format($summary['gst'], 2, '.', '')]);
             fputcsv($out, ['Total', number_format($summary['total'], 2, '.', '')]);
+
+            // Absent from months finalized before cover sessions existed.
+            $coverRows = $report['cover_rows'] ?? [];
+
+            if ($coverRows !== []) {
+                fputcsv($out, []);
+                fputcsv($out, ["Covering {$gym->name}'s own clients — credit to you"]);
+                fputcsv($out, ['Date', 'Time', 'Service', 'Who you trained', '# of people', '$ you charge', 'Included']);
+                foreach ($coverRows as $row) {
+                    fputcsv($out, [
+                        $row['date'],
+                        Carbon::createFromFormat('H:i', $row['time'])->format('g:i a'),
+                        $row['service'],
+                        implode(', ', $row['names']),
+                        $row['people'],
+                        number_format($row['subtotal'], 2, '.', ''),
+                        $row['billable'] ? 'yes' : 'no',
+                    ]);
+                }
+                fputcsv($out, []);
+                fputcsv($out, ['Cover sessions included', $summary['cover_sessions'] ?? 0]);
+                fputcsv($out, ['Cover sessions excluded', $summary['cover_sessions_excluded'] ?? 0]);
+                fputcsv($out, ['Cover fees', number_format($summary['cover_subtotal'] ?? 0, 2, '.', '')]);
+                fputcsv($out, ['GST you charge', number_format($summary['cover_gst'] ?? 0, 2, '.', '')]);
+                fputcsv($out, ['Cover credit', number_format($summary['cover_total'] ?? 0, 2, '.', '')]);
+                fputcsv($out, ['Net owed to gym', number_format($summary['net_total'] ?? $summary['total'], 2, '.', '')]);
+            }
+
             fclose($out);
         }, 'gym-usage-'.str($gym->name)->slug().'-'.$report['period'].'.csv', ['Content-Type' => 'text/csv']);
     }
@@ -178,7 +206,7 @@ class GymUsage extends Component
     private function report(Gym $gym, GymUsageReportBuilder $builder): array
     {
         if ($finalized = $this->finalized($gym)) {
-            return $finalized->snapshot;
+            return $finalized->normalizedSnapshot();
         }
 
         [$year, $monthNumber] = $this->yearMonth();

@@ -222,7 +222,7 @@ class Show extends Component
         $this->authorize('update', $this->trainingSession);
         $this->saveAttendance();
 
-        if (empty($this->attendees)) {
+        if (empty($this->attendees) && ! $this->trainingSession->isCover()) {
             $this->addError('attendees', 'Add at least one client before completing.');
 
             return;
@@ -232,6 +232,16 @@ class Show extends Component
             $this->trainingSession = app(CompleteTrainingSession::class)->handle($this->trainingSession->fresh());
         } catch (BillingException $e) {
             $this->addError('attendees', $e->getMessage());
+
+            return;
+        }
+
+        if ($this->trainingSession->isCover()) {
+            Flux::toast(
+                'Cover session completed. '.money($this->trainingSession->coverTotal())
+                    ." credited to you on {$this->trainingSession->gym->name}'s statement.",
+                variant: 'success',
+            );
 
             return;
         }

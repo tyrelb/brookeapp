@@ -29,14 +29,22 @@ class Dashboard extends Component
             ->ofType(TransactionType::Payment, TransactionType::Refund)
             ->inPeriod($from, $to);
 
+        // Cover fees are invoiced to a gym rather than posted to a client ledger, so they
+        // have to be added here or this card would disagree with Reports → Monthly.
+        $cover = TrainingSession::query()
+            ->where('status', SessionStatus::Completed->value)
+            ->cover()
+            ->where('gym_billable', true)
+            ->whereBetween('starts_at', [now()->startOfMonth(), now()->endOfMonth()]);
+
         return view('livewire.dashboard', [
             'activeClients' => Client::query()->active()->count(),
             'sessionsThisMonth' => TrainingSession::query()
                 ->where('status', SessionStatus::Completed->value)
                 ->whereBetween('starts_at', [now()->startOfMonth(), now()->endOfMonth()])
                 ->count(),
-            'revenueThisMonth' => (float) $charges->sum('subtotal'),
-            'gstThisMonth' => (float) $charges->sum('gst_amount'),
+            'revenueThisMonth' => round((float) $charges->sum('subtotal') + (float) $cover->sum('cover_subtotal'), 2),
+            'gstThisMonth' => round((float) $charges->sum('gst_amount') + (float) $cover->sum('cover_gst_amount'), 2),
             'paymentsThisMonth' => (float) $payments->sum('amount'),
             'lowWallets' => $this->lowWallets(),
             'owing' => $this->owing(),

@@ -1,5 +1,6 @@
 <?php
 
+use App\Actions\CompleteTrainingSession;
 use App\Livewire\Reports\GymUsage;
 use App\Livewire\Sessions\Log;
 use App\Livewire\Sessions\Show;
@@ -13,6 +14,7 @@ use App\Models\Service;
 use App\Models\SessionAttendee;
 use App\Models\TrainingSession;
 use App\Models\User;
+use App\Models\WalletTransaction;
 use Livewire\Livewire;
 
 beforeEach(function () {
@@ -140,4 +142,140 @@ it('renders an empty state without gyms and hides other trainers\' gyms', functi
     $theirs = Gym::factory()->create(['user_id' => $other->id, 'name' => 'Private Gym']);
 
     Livewire::test(GymUsage::class, ['gym' => (string) $theirs->id])->assertDontSee('Private Gym');
+});
+
+it('saves a cover rate card independently of how the gym bills the trainer', function () {
+    Livewire::test(Gyms::class)
+        ->call('create')
+        ->set('name', 'Soul Fitness')
+        ->set('billing_model', 'monthly')   // rent-only, yet it can still pay for cover
+        ->set('monthly_fee', '300')
+        ->set('covers_clients', true)
+        ->set('coverRates.1', '50')
+        ->set('coverRates.2', '70')
+        ->call('save')
+        ->assertHasNoErrors();
+
+    $gym = Gym::query()->where('name', 'Soul Fitness')->firstOrFail();
+    expect($gym->cover_rates)->toEqual([1 => 50, 2 => 70])
+        ->and($gym->coverRateFor(1))->toBe(50.0)
+        ->and($gym->coverRateFor(2))->toBe(70.0)
+        ->and($gym->usage_rates)->toBeNull();   // the monthly-only gate must not wipe the cover card
+
+    // Ticking the box means at least the one-person rate is needed.
+    Livewire::test(Gyms::class)
+        ->call('edit', $gym->id)->set('coverRates.1', '')->call('save')->assertHasErrors(['coverRates.1']);
+
+    // Unticking clears the card.
+    Livewire::test(Gyms::class)
+        ->call('edit', $gym->id)->set('covers_clients', false)->call('save')->assertHasNoErrors();
+    expect($gym->refresh()->cover_rates)->toBeNull();
+});
+
+it('logs a cover session with free-text names and charges nobody', function () {
+    $gym = Gym::factory()->covers()->create(['user_id' => $this->trainer->id, 'name' => 'Soul Fitness', 'is_default' => true]);
+
+    Livewire::test(Log::class)
+        ->set('cover', true)
+        ->set('service_id', $this->service->id)
+        ->set('gym_id', $gym->id)
+        ->set('date', '2026-09-04')
+        ->set('time', '09:00')
+        ->set('coverNames', ['Ann R.', ' Bo T. '])
+        ->call('save', true)
+        ->assertHasNoErrors();
+
+    $session = TrainingSession::query()->cover()->firstOrFail();
+    expect($session->cover_names)->toBe(['Ann R.', 'Bo T.'])
+        ->and((float) $session->cover_subtotal)->toBe(70.0)
+        ->and((float) $session->cover_gst_amount)->toBe(3.5)
+        ->and($session->attendees()->count())->toBe(0)
+        ->and(WalletTransaction::count())->toBe(0);
+
+    Livewire::test(Show::class, ['trainingSession' => $session])
+        ->assertOk()
+        ->assertSee('Ann R.')
+        ->assertSee('Covering Soul Fitness');
+});
+
+it('rejects a cover session with no names or no agreed rate', function () {
+    $gym = Gym::factory()->covers()->create(['user_id' => $this->trainer->id]);
+    $rateless = Gym::factory()->create(['user_id' => $this->trainer->id, 'name' => 'Eastside']);
+
+    $form = fn (int $gymId, array $names) => Livewire::test(Log::class)
+        ->set('cover', true)
+        ->set('service_id', $this->service->id)
+        ->set('gym_id', $gymId)
+        ->set('date', '2026-09-04')
+        ->set('time', '09:00')
+        ->set('coverNames', $names)
+        ->call('save', true);
+
+    $form($gym->id, ['', '  '])->assertHasErrors(['coverNames']);
+    $form($rateless->id, ['Ann'])->assertHasErrors(['coverNames']);
+
+    expect(TrainingSession::query()->cover()->count())->toBe(0);
+});
+
+it('shows the cover credit and a negative total on the gym usage report', function () {
+    $gym = Gym::factory()->covers()->create(['user_id' => $this->trainer->id, 'name' => 'Soul Fitness']);
+
+    $session = TrainingSession::factory()->cover(['Ann R.', 'Bo T.'])->create([
+        'user_id' => $this->trainer->id, 'service_id' => $this->service->id,
+        'gym_id' => $gym->id, 'starts_at' => '2026-09-04 09:00',
+    ]);
+    app(CompleteTrainingSession::class)->handle($session);
+
+    Livewire::test(GymUsage::class, ['month' => '2026-09', 'gym' => (string) $gym->id])
+        ->assertOk()
+        ->assertSee('Covering Soul Fitness')
+        ->assertSee('Ann R., Bo T.')
+        ->assertSee('Soul Fitness owes you')
+        ->assertSee('$73.50')
+        ->call('exportCsv')
+        ->assertFileDownloaded('gym-usage-soul-fitness-2026-09.csv');
+});
+
+it('renders every screen that lists sessions when one has no attendees', function () {
+    $gym = Gym::factory()->covers()->create(['user_id' => $this->trainer->id]);
+    $session = TrainingSession::factory()->cover(['Ann R.'])->create([
+        'user_id' => $this->trainer->id, 'service_id' => $this->service->id,
+        'gym_id' => $gym->id, 'starts_at' => now()->startOfMonth()->addDays(2)->setTime(9, 0),
+    ]);
+    app(CompleteTrainingSession::class)->handle($session);
+
+    $this->get(route('dashboard'))->assertOk();
+    $this->get(route('sessions.index'))->assertOk();
+    $this->get(route('sessions.show', $session))->assertOk();
+    $this->get(route('sessions.calendar'))->assertOk();
+    $this->get(route('reports.monthly'))->assertOk()->assertSee('$50.00');
+    $this->get(route('reports.annual'))->assertOk();
+});
+
+it('books a cover session for later without pricing it yet', function () {
+    $gym = Gym::factory()->covers()->create(['user_id' => $this->trainer->id, 'name' => 'Soul Fitness']);
+
+    Livewire::test(Log::class, ['mode' => 'book'])
+        ->set('cover', true)
+        ->set('service_id', $this->service->id)
+        ->set('gym_id', $gym->id)
+        ->set('date', '2026-10-04')
+        ->set('time', '09:00')
+        ->set('coverNames', ['Rita P.'])
+        ->call('save', false)
+        ->assertHasNoErrors();
+
+    $session = TrainingSession::query()->cover()->firstOrFail();
+    expect($session->isScheduled())->toBeTrue()
+        ->and($session->cover_names)->toBe(['Rita P.'])
+        ->and($session->cover_subtotal)->toBeNull();   // priced only on completion
+
+    // Ticking cover clears any clients already picked, and drops the repeat option.
+    $form = Livewire::test(Log::class, ['mode' => 'book'])
+        ->set('attendees', [$this->clients->first()->id => ['attended' => true]])
+        ->set('repeat', true)
+        ->set('cover', true);
+
+    expect($form->get('attendees'))->toBe([])
+        ->and($form->get('repeat'))->toBeFalse();
 });

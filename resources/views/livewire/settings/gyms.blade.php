@@ -18,6 +18,11 @@
                                 @if ($gym->chargesUsage()) · {{ money($gym->rateFor(1)) }} for 1, {{ money($gym->rateFor(2)) }} for 2 … {{ money($gym->rateFor(10)) }} for 10 @endif
                                 · {{ $gym->charges_gst ? number_format((float) $gym->gst_rate, 2).'% GST' : 'no GST' }}
                             </div>
+                            @if ($gym->coversSessions())
+                                <div class="mt-1 text-sm text-emerald-700 dark:text-emerald-400">
+                                    Pays you {{ money($gym->coverRateFor(1)) }} for 1, {{ money($gym->coverRateFor(2)) }} for 2 to cover their clients
+                                </div>
+                            @endif
                             <div class="mt-1 text-xs text-zinc-500">{{ $gym->training_sessions_count }} {{ Str::plural('session', $gym->training_sessions_count) }} logged here</div>
                         </div>
                         <div class="flex shrink-0 flex-wrap gap-1">
@@ -77,6 +82,27 @@
                     @error('rates.1') <flux:error name="rates.1">{{ $message }}</flux:error> @enderror
                 </div>
             @endif
+
+            <div class="rounded-lg border border-zinc-200 p-4 dark:border-zinc-700">
+                <flux:checkbox wire:model.live="covers_clients"
+                    label="This gym pays me to cover its own clients"
+                    description="For when the owner is away. You are paid per session by group size and owe the gym nothing for those sessions." />
+
+                @if ($covers_clients)
+                    <div class="mt-4">
+                        <flux:label>What the gym pays you per session, by group size</flux:label>
+                        <flux:description>Before <strong>your</strong> GST &mdash; this is money coming in, not a usage charge. Leave a size blank to use the next smaller size's rate.</flux:description>
+                        <div class="mt-2 grid grid-cols-5 gap-2">
+                            @foreach ($people as $n)
+                                <flux:input wire:model="coverRates.{{ $n }}" type="number" step="0.01" min="0" placeholder="—">
+                                    <x-slot:iconLeading><span class="text-xs text-zinc-500">{{ $n }}</span></x-slot:iconLeading>
+                                </flux:input>
+                            @endforeach
+                        </div>
+                        @error('coverRates.1') <flux:error name="coverRates.1">{{ $message }}</flux:error> @enderror
+                    </div>
+                @endif
+            </div>
 
             <div class="grid gap-4 sm:grid-cols-2">
                 <flux:checkbox wire:model.live="charges_gst" label="This gym charges GST" />
