@@ -5,12 +5,14 @@ namespace App\Livewire\Clients;
 use App\Actions\PostAdjustment;
 use App\Actions\PostMonthlyFee;
 use App\Actions\RecordPayment;
+use App\Actions\UpdateTransaction;
 use App\Enums\PaymentMethod;
 use App\Enums\TransactionType;
 use App\Exceptions\BillingException;
 use App\Mail\WalletLinkMail;
 use App\Models\Client;
 use App\Models\WalletTransaction;
+use App\Models\WalletTransactionRevision;
 use Flux\Flux;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
@@ -41,6 +43,26 @@ class Show extends Component
     public string $adjustmentDate = '';
 
     public string $adjustmentMethod = '';
+
+    // Edit transaction modal
+    public ?int $editingId = null;
+
+    public string $editAmount = '';
+
+    public string $editKind = 'credit'; // adjustments only: credit | debit
+
+    public string $editDate = '';
+
+    public string $editMethod = '';
+
+    public string $editReference = '';
+
+    public string $editDescription = '';
+
+    public string $editReason = '';
+
+    // History modal
+    public ?int $historyId = null;
 
     public function mount(Client $client): void
     {
@@ -167,9 +189,7 @@ class Show extends Component
     {
         $this->authorize('update', $this->client);
 
-        $transaction = WalletTransaction::query()
-            ->where('client_id', $this->client->id)
-            ->findOrFail($transactionId);
+        $transaction = $this->transaction($transactionId);
 
         if ($transaction->type === TransactionType::SessionCharge) {
             Flux::toast('Session charges are voided by reopening the session.', variant: 'warning');
@@ -182,7 +202,99 @@ class Show extends Component
         }
 
         $transaction->update(['voided_at' => now()]);
+        $transaction->recordRevision(WalletTransactionRevision::ACTION_VOIDED);
         Flux::toast('Transaction voided.', variant: 'success');
+    }
+
+    public function editTransaction(int $transactionId): void
+    {
+        $this->authorize('update', $this->client);
+
+        $transaction = $this->transaction($transactionId);
+
+        if (! $transaction->isEditable()) {
+            Flux::toast(
+                $transaction->isVoided()
+                    ? 'Voided entries cannot be edited.'
+                    : 'Session charges are corrected by reopening the session.',
+                variant: 'warning',
+            );
+
+            return;
+        }
+
+        $this->resetValidation();
+        $this->editingId = $transaction->id;
+        // Monthly fees are entered before GST; everything else is entered as the amount that moved.
+        $this->editAmount = (string) ($transaction->type === TransactionType::MonthlyFee
+            ? (float) $transaction->subtotal
+            : abs((float) $transaction->amount));
+        $this->editKind = (float) $transaction->amount < 0 ? 'debit' : 'credit';
+        $this->editDate = $transaction->transacted_on->toDateString();
+        $this->editMethod = $transaction->payment_method?->value ?? '';
+        $this->editReference = (string) $transaction->reference;
+        $this->editDescription = (string) $transaction->description;
+        $this->editReason = '';
+
+        Flux::modal('edit-transaction')->show();
+    }
+
+    public function updateTransaction(UpdateTransaction $updateTransaction): void
+    {
+        $this->authorize('update', $this->client);
+
+        $transaction = $this->transaction((int) $this->editingId);
+
+        $this->validate([
+            'editAmount' => ['required', 'numeric', 'min:0.01', 'max:100000'],
+            'editDate' => ['required', 'date'],
+            'editMethod' => ['nullable', Rule::enum(PaymentMethod::class)],
+            'editReference' => ['nullable', 'string', 'max:100'],
+            'editDescription' => ['nullable', 'string', 'max:255'],
+            'editReason' => ['required', 'string', 'max:255'],
+        ]);
+
+        $amount = (float) $this->editAmount;
+
+        if ($transaction->type === TransactionType::Adjustment && $this->editKind === 'debit') {
+            $amount = -$amount;
+        }
+
+        try {
+            $updateTransaction->handle(
+                $transaction,
+                $amount,
+                $this->editDate,
+                $this->editReason,
+                $this->editDescription,
+                $this->editMethod ? PaymentMethod::from($this->editMethod) : null,
+                $this->editReference,
+            );
+        } catch (BillingException $e) {
+            $this->addError('editAmount', $e->getMessage());
+
+            return;
+        }
+
+        $this->editingId = null;
+        $this->reset('editAmount', 'editReference', 'editDescription', 'editReason');
+        Flux::modal('edit-transaction')->close();
+        Flux::toast('Transaction updated.', variant: 'success');
+    }
+
+    public function showHistory(int $transactionId): void
+    {
+        $this->authorize('view', $this->client);
+
+        $this->historyId = $this->transaction($transactionId)->id;
+        Flux::modal('transaction-history')->show();
+    }
+
+    private function transaction(int $transactionId): WalletTransaction
+    {
+        return WalletTransaction::query()
+            ->where('client_id', $this->client->id)
+            ->findOrFail($transactionId);
     }
 
     public function render()
@@ -191,7 +303,15 @@ class Show extends Component
 
         return view('livewire.clients.show', [
             'balance' => $this->client->balance(),
-            'transactions' => $this->client->transactions()->with('trainingSession.service')->limit(200)->get(),
+            'transactions' => $this->client->transactions()
+                ->with('trainingSession.service')
+                ->withCount(['revisions as edit_count' => fn ($q) => $q->where('action', '!=', WalletTransactionRevision::ACTION_CREATED)])
+                ->limit(200)
+                ->get(),
+            'editing' => $this->editingId ? $this->transaction($this->editingId) : null,
+            'history' => $this->historyId
+                ? $this->transaction($this->historyId)->load('revisions.changedBy')
+                : null,
             'attendances' => $this->client->attendances()
                 ->with('trainingSession.service', 'trainingSession.attendees')
                 ->get()

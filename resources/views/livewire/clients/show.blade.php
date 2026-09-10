@@ -92,15 +92,22 @@
                                 @if ($tx->isVoided())
                                     <span class="ml-1 text-xs">(voided {{ $tx->voided_at->format('M j') }})</span>
                                 @endif
+                                @if ($tx->edit_count > 0)
+                                    <button type="button" wire:click="showHistory({{ $tx->id }})" class="ml-1 text-xs text-zinc-500 underline decoration-dotted underline-offset-2 hover:text-zinc-700 dark:hover:text-zinc-300">edited</button>
+                                @endif
                             </flux:table.cell>
                             <flux:table.cell class="text-xs">{{ $tx->payment_method?->label() }} {{ $tx->reference }}</flux:table.cell>
                             <flux:table.cell align="end">{{ $tx->type->isMoneyMovement() || $tx->type->isCharge() ? money($tx->subtotal) : '' }}</flux:table.cell>
                             <flux:table.cell align="end">{{ (float) $tx->gst_amount > 0 ? money($tx->gst_amount) : '' }}</flux:table.cell>
                             <flux:table.cell align="end"><x-money :amount="$tx->amount" signed class="font-medium" /></flux:table.cell>
                             <flux:table.cell align="end">
-                                @if (! $tx->isVoided() && $tx->type !== \App\Enums\TransactionType::SessionCharge)
-                                    <flux:button size="xs" variant="ghost" wire:click="voidTransaction({{ $tx->id }})" wire:confirm="Void this {{ strtolower($tx->type->label()) }} of {{ money($tx->amount) }}? It will be excluded from balances and reports.">Void</flux:button>
-                                @endif
+                                <div class="flex justify-end gap-1">
+                                    @if ($tx->isEditable())
+                                        <flux:button size="xs" variant="ghost" wire:click="editTransaction({{ $tx->id }})">Edit</flux:button>
+                                        <flux:button size="xs" variant="ghost" wire:click="voidTransaction({{ $tx->id }})" wire:confirm="Void this {{ strtolower($tx->type->label()) }} of {{ money($tx->amount) }}? It will be excluded from balances and reports.">Void</flux:button>
+                                    @endif
+                                    <flux:button size="xs" variant="ghost" icon="clock" wire:click="showHistory({{ $tx->id }})" title="Change history" aria-label="Change history" />
+                                </div>
                             </flux:table.cell>
                         </flux:table.row>
                     @endforeach
@@ -196,5 +203,91 @@
                 <flux:button type="submit" variant="primary">Post</flux:button>
             </div>
         </form>
+    </flux:modal>
+
+    <flux:modal name="edit-transaction" class="md:w-[30rem]">
+        @if ($editing)
+            <form wire:submit="updateTransaction" class="space-y-5">
+                <div>
+                    <flux:heading size="lg">Edit {{ strtolower($editing->type->label()) }}</flux:heading>
+                    <flux:subheading>Posted {{ $editing->transacted_on->format('M j, Y') }}. Corrections are kept in this entry's change history.</flux:subheading>
+                </div>
+
+                @if ($editing->type === \App\Enums\TransactionType::Adjustment)
+                    <flux:radio.group wire:model="editKind" label="Kind">
+                        <flux:radio value="credit" label="Credit (add to balance)" />
+                        <flux:radio value="debit" label="Debit (deduct from balance)" />
+                    </flux:radio.group>
+                @endif
+
+                <flux:input
+                    wire:model="editAmount"
+                    :label="match ($editing->type) {
+                        \App\Enums\TransactionType::MonthlyFee => 'Fee before GST',
+                        \App\Enums\TransactionType::Refund => 'Amount refunded (GST included)',
+                        \App\Enums\TransactionType::Payment => 'Amount received (GST included)',
+                        default => 'Amount',
+                    }"
+                    type="number" step="0.01" min="0.01" placeholder="0.00"
+                />
+
+                @if ($editing->type->isMoneyMovement())
+                    <flux:select wire:model="editMethod" :label="$editing->type === \App\Enums\TransactionType::Refund ? 'Refunded by' : 'Payment method'">
+                        @foreach ($paymentMethods as $method)
+                            <flux:select.option value="{{ $method->value }}">{{ $method->label() }}</flux:select.option>
+                        @endforeach
+                    </flux:select>
+                    <flux:input wire:model="editReference" label="Reference" placeholder="Cheque # or e-Transfer reference" />
+                @endif
+
+                <flux:input wire:model="editDate" label="Date" type="date" />
+                <flux:input wire:model="editDescription" label="Description" placeholder="Shown on the ledger and the client's wallet" />
+                <flux:input wire:model="editReason" label="Reason for this change" placeholder="e.g. Client sent a corrected invoice" />
+
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close><flux:button variant="ghost">Cancel</flux:button></flux:modal.close>
+                    <flux:button type="submit" variant="primary">Save changes</flux:button>
+                </div>
+            </form>
+        @endif
+    </flux:modal>
+
+    <flux:modal name="transaction-history" class="md:w-[32rem]">
+        @if ($history)
+            <div class="space-y-5">
+                <div>
+                    <flux:heading size="lg">Change history</flux:heading>
+                    <flux:subheading>{{ $history->description ?: $history->type->label() }} — {{ money($history->amount, true) }}</flux:subheading>
+                </div>
+                <ol class="space-y-4 text-sm">
+                    @if ($history->revisions->firstWhere('action', \App\Models\WalletTransactionRevision::ACTION_CREATED) === null)
+                        <li>
+                            <div class="font-medium">Created</div>
+                            <div class="text-xs text-zinc-500">{{ $history->created_at->format('M j, Y g:i a') }}</div>
+                        </li>
+                    @endif
+                    @foreach ($history->revisions as $revision)
+                        <li>
+                            <div class="font-medium">
+                                {{ $revision->actionLabel() }}
+                                @if ($revision->changedBy)
+                                    <span class="font-normal text-zinc-500">by {{ $revision->changedBy->name }}</span>
+                                @endif
+                            </div>
+                            <div class="text-xs text-zinc-500">{{ $revision->created_at->format('M j, Y g:i a') }}</div>
+                            @foreach ($revision->summaryLines() as $line)
+                                <div class="mt-1 text-zinc-600 dark:text-zinc-300">{{ $line }}</div>
+                            @endforeach
+                            @if ($revision->reason)
+                                <div class="mt-1 text-zinc-500">Reason: {{ $revision->reason }}</div>
+                            @endif
+                        </li>
+                    @endforeach
+                </ol>
+                <div class="flex justify-end">
+                    <flux:modal.close><flux:button variant="ghost">Close</flux:button></flux:modal.close>
+                </div>
+            </div>
+        @endif
     </flux:modal>
 </div>
