@@ -1,6 +1,7 @@
 <div>
     <x-page-header title="Sessions" subtitle="Every session you've logged, and who came">
         <x-slot:actions>
+            <flux:button :href="route('sessions.log.bulk')" icon="squares-plus" wire:navigate>Bulk log</flux:button>
             <flux:button :href="route('sessions.log')" icon="plus" variant="primary" wire:navigate>Log session</flux:button>
         </x-slot:actions>
     </x-page-header>

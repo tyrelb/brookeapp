@@ -8,6 +8,7 @@ use App\Actions\SendSessionInvites;
 use App\Actions\SendSessionReceipts;
 use App\Enums\SessionStatus;
 use App\Exceptions\BillingException;
+use App\Livewire\Sessions\Concerns\PicksAttendees;
 use App\Livewire\Sessions\Concerns\PreviewsCharges;
 use App\Models\Client;
 use App\Models\Gym;
@@ -26,7 +27,7 @@ use Livewire\Component;
  */
 class Log extends Component
 {
-    use PreviewsCharges;
+    use PicksAttendees, PreviewsCharges;
 
     public string $mode = 'log'; // log | book
 
@@ -136,38 +137,11 @@ class Log extends Component
         }
     }
 
-    public function updatedGymId(): void
-    {
-        $this->gymChosen = true;
-    }
-
     public function updatedServiceId(): void
     {
         if ($service = $this->services()->firstWhere('id', (int) $this->service_id)) {
             $this->duration_minutes = (string) $service->duration_minutes;
         }
-    }
-
-    public function addClient(int $clientId): void
-    {
-        $client = Client::query()->find($clientId);
-
-        if (! $client || isset($this->attendees[$clientId])) {
-            return;
-        }
-
-        $this->attendees[$clientId] = ['attended' => true, 'override' => ''];
-        $this->clientSearch = '';
-
-        // The first client's usual gym wins unless the trainer already chose one.
-        if (! $this->gymChosen && $client->gym_id && Gym::query()->active()->whereKey($client->gym_id)->exists()) {
-            $this->gym_id = (string) $client->gym_id;
-        }
-    }
-
-    public function removeClient(int $clientId): void
-    {
-        unset($this->attendees[$clientId]);
     }
 
     public function save(bool $complete = true): void
@@ -307,17 +281,10 @@ class Log extends Component
         $selected = Client::query()->with('plan.rates')->whereIn('id', array_keys($this->attendees))->get()->keyBy('id');
         $service = Service::query()->find((int) $this->service_id);
 
-        $candidates = Client::query()->active()->with('plan')
-            ->whereNotIn('id', array_keys($this->attendees))
-            ->search($this->clientSearch)
-            ->orderBy('first_name')->orderBy('last_name')
-            ->limit($this->clientSearch === '' ? 12 : 25)
-            ->get();
-
         return view('livewire.sessions.log', [
             'services' => $this->services(),
             'gyms' => Gym::query()->active()->orderBy('name')->get(),
-            'candidates' => $candidates,
+            'candidates' => $this->candidateClients(),
             'selected' => $selected,
             'preview' => $this->previewCharges($service, $selected),
             'repeatPreview' => $this->isBooking() && $this->repeat ? $this->repeatPreview() : null,

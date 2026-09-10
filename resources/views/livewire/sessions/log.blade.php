@@ -2,7 +2,11 @@
     @if ($isBooking = $this->isBooking())
         <x-page-header title="Book session" subtitle="Schedule a future session. Clients can get a calendar invite by email; only you can change a booking." />
     @else
-        <x-page-header title="Log session" subtitle="Record who trained. The rate tier is picked from how many people attended." />
+        <x-page-header title="Log session" subtitle="Record who trained. The rate tier is picked from how many people attended.">
+            <x-slot:actions>
+                <flux:button :href="route('sessions.log.bulk')" icon="squares-plus" wire:navigate>Bulk log</flux:button>
+            </x-slot:actions>
+        </x-page-header>
     @endif
 
     <form wire:submit="save({{ $isBooking ? 'false' : 'true' }})" class="space-y-8">

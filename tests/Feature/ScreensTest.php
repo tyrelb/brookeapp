@@ -38,6 +38,7 @@ it('renders every main page for an authenticated trainer', function () {
         route('plans.edit', $plan),
         route('sessions.index'),
         route('sessions.log'),
+        route('sessions.log.bulk'),
         route('sessions.show', $session),
         route('settings.business'),
         route('docs.show'),
