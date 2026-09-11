@@ -8,12 +8,15 @@ Open **Calendar** in the sidebar. It opens on today in Day view; switch with the
 *Month view. Green is completed, purple is scheduled, grey is cancelled. The repeat symbol marks sessions from a repeating booking.*
 
 ![Week view](/images/docs/calendar-week.png)
-*Week view shows times and who is coming.*
+*Week view lays the week out by the hour. Each session sits at its real time and length, so the free time between bookings shows as empty space.*
 
 ![Day view for one day](/images/docs/calendar-day.png)
-*Day view lists each session in full.*
+*Day view shows one day on the same time grid, with the service, gym and status on each session.*
+
+Day and Week open at 7 am, or earlier if a session starts before then; scroll the grid to see the rest of the day. A red line marks the current time on today's column. Sessions that overlap sit side by side, marked ⚠.
 
 - Click a **session** to open it.
+- Click an **empty time** on the Day or Week grid to book a session at that time. The form opens with the date and time filled in.
 - Click a **date number** or a week column's heading to see that whole day.
 - Click the **+** on a day to book a session on that date.
 

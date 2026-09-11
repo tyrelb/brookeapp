@@ -235,6 +235,36 @@ it('shows a single day with every session on it and steps one day at a time', fu
     $this->get(route('sessions.calendar', ['view' => 'day', 'date' => '2026-09-15']))->assertOk()->assertSee('Tuesday, September 15, 2026');
 });
 
+it('draws the day and week on a time grid, opening early enough to show the first session', function () {
+    $early = TrainingSession::factory()->create(['user_id' => $this->trainer->id, 'service_id' => $this->service->id, 'starts_at' => '2026-09-15 06:00:00', 'duration_minutes' => 90]);
+    SessionAttendee::factory()->create(['training_session_id' => $early->id, 'client_id' => $this->ava->id]);
+
+    foreach (['day', 'week'] as $view) {
+        Livewire::test(Calendar::class, ['date' => '2026-09-15', 'view' => $view])
+            ->assertSeeHtml('top: 25%; height: calc(6.25% - 1px)')
+            ->assertSeeHtml(e(route('sessions.book', ['date' => '2026-09-15', 'time' => '10:30'], false)))
+            ->assertViewHas('scrollHour', 6)
+            ->assertSee('Ava Nguyen');
+    }
+
+    Livewire::test(Calendar::class, ['date' => '2026-09-16', 'view' => 'day'])
+        ->assertViewHas('scrollHour', 7)
+        ->assertSee('No sessions on this day.');
+});
+
+it('opens the booking form at the time picked on the calendar', function () {
+    Livewire::withQueryParams(['date' => '2026-09-20', 'time' => '14:30'])
+        ->test(Log::class, ['mode' => 'book'])
+        ->assertSet('date', '2026-09-20')
+        ->assertSet('time', '14:30');
+
+    Livewire::withQueryParams(['date' => '2026-09-20', 'time' => '25:99'])
+        ->test(Log::class, ['mode' => 'book'])
+        ->assertSet('time', '09:00');
+
+    $this->get(route('sessions.book', ['date' => '2026-09-20', 'time' => ['14:30']]))->assertOk();
+});
+
 it('opens on today in the day view by default', function () {
     Livewire::test(Calendar::class)
         ->assertSet('view', 'day')

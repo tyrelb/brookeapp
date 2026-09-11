@@ -68,6 +68,30 @@ select:focus[data-flux-control] {
     @apply size-4;
 } */
 
+/* Calendar time grid (day and week views). Each hour is --cal-hour tall. The
+   half-hour slots behind the sessions draw the grid lines, and clicking an empty
+   one books that time. */
+.cal-grid {
+    --cal-hour: 4rem;
+}
+
+.cal-slot {
+    @apply block h-[calc(var(--cal-hour)/2)] border-t border-zinc-200 first:border-t-0 hover:bg-accent/5 dark:border-zinc-800;
+}
+
+.cal-slot-half {
+    @apply border-dashed border-zinc-100 dark:border-zinc-800/60;
+}
+
+.cal-slot::after {
+    content: '+ ' attr(data-time);
+    @apply invisible block px-1.5 pt-1 text-[11px] leading-none text-accent-content;
+}
+
+.cal-slot:hover::after {
+    @apply visible;
+}
+
 /* Documentation pages: Markdown chapters rendered through Str::markdown(). */
 .docs-prose {
     @apply prose prose-zinc max-w-none dark:prose-invert;

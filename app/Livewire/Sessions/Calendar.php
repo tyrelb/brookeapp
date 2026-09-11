@@ -3,6 +3,7 @@
 namespace App\Livewire\Sessions;
 
 use App\Models\TrainingSession;
+use App\Support\CalendarGrid;
 use App\Support\SessionConflicts;
 use Carbon\CarbonImmutable;
 use Livewire\Attributes\Title;
@@ -112,6 +113,14 @@ class Calendar extends Component
             $days[] = $d;
         }
 
+        // Day and week draw each session at its time of day, side by side where they overlap.
+        $placements = [];
+        if ($this->view !== 'month') {
+            foreach ($sessions as $daySessions) {
+                $placements += CalendarGrid::place($daySessions);
+            }
+        }
+
         return view('livewire.sessions.calendar', [
             'title' => $title,
             'days' => $days,
@@ -120,6 +129,11 @@ class Calendar extends Component
             'conflictCount' => count(array_intersect_key($conflicts, $sessions->flatten()->keyBy('id')->all())),
             'month' => $anchor->month,
             'weeks' => array_chunk($days, 7),
+            'placements' => $placements,
+            'halfHours' => CalendarGrid::halfHours(), // not "slots": Livewire reserves that view variable
+            // Open the time grid at the start of the working day, or earlier if a session starts before then.
+            'scrollHour' => min(7, $sessions->flatten()->min(fn (TrainingSession $s) => $s->starts_at->hour) ?? 7),
+            'nowOffset' => CalendarGrid::offset(now()),
         ]);
     }
 }

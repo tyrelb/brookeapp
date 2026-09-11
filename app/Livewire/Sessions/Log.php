@@ -91,7 +91,9 @@ class Log extends Component
         if ($this->isBooking()) {
             $requested = request()->query('date');
             $this->date = $requested && strtotime($requested) ? $requested : today()->addDay()->toDateString();
-            $this->time = '09:00';
+            // The calendar's time grid links an empty slot straight to its time.
+            $requestedTime = request()->query('time');
+            $this->time = is_string($requestedTime) && preg_match('/^([01]\d|2[0-3]):[0-5]\d$/', $requestedTime) ? $requestedTime : '09:00';
             $this->until = Carbon::parse($this->date)->addWeeks(8)->toDateString();
             $this->weekdays = [Carbon::parse($this->date)->dayOfWeekIso];
         } else {
