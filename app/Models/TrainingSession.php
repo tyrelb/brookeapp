@@ -13,6 +13,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Str;
 
@@ -149,6 +150,19 @@ class TrainingSession extends Model
             ->flatMap(fn (SessionAttendee $attendee) => $attendee->roomCount() > 0 ? $attendee->peopleNames() : [])
             ->values()
             ->all();
+    }
+
+    /**
+     * Who the session is with, as a calendar shows it: everyone booked, whether or not they
+     * came, so a no-show still reads as their session. Needs attendees.client loaded.
+     */
+    public function displayName(): string
+    {
+        $names = $this->isCover()
+            ? $this->coverNames()
+            : $this->attendees->pluck('client.full_name')->filter()->values()->all();
+
+        return $names === [] ? 'No attendees yet' : Arr::join($names, ', ', ' and ');
     }
 
     /**

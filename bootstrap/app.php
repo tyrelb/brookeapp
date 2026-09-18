@@ -18,6 +18,9 @@ return Application::configure(basePath: dirname(__DIR__))
             'admin' => EnsureUserIsAdmin::class,
             'not-suspended' => EnsureUserIsNotSuspended::class,
         ]);
+
+        // Written by a script in partials/head, so it arrives unencrypted.
+        $middleware->encryptCookies(except: ['narrow_screen']);
     })
     ->withExceptions(function (Exceptions $exceptions): void {
         $exceptions->shouldRenderJsonWhen(

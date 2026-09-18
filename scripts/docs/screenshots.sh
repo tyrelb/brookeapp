@@ -170,6 +170,14 @@ chapter_calendar() {
     go "/sessions/calendar?view=week&date=2026-09-04"; tidy; shot calendar-week
     go "/sessions/calendar?view=day&date=2026-09-03"; tidy; shot calendar-day
 
+    # A phone opens the calendar as a list; tapping an upcoming session slides up the sheet.
+    vp 390x844
+    go "/sessions/calendar?view=list"; tidy; shot calendar-list-phone
+    js "(function(){var b=[].slice.call(document.querySelectorAll('section ul li button')).find(function(e){return !/Completed|Cancelled|Not logged/.test(e.textContent);});if(!b){return 'NOT FOUND';}b.click();return 'opened';})()" >/dev/null
+    settle
+    click_text "Log session"
+    tidy; shot session-sheet-phone
+
     vp 1440x1100
     go /sessions/book; tidy; shot book-session
     vp 1440x1000

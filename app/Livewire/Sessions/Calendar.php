@@ -6,6 +6,7 @@ use App\Models\TrainingSession;
 use App\Support\CalendarGrid;
 use App\Support\SessionConflicts;
 use Carbon\CarbonImmutable;
+use Livewire\Attributes\On;
 use Livewire\Attributes\Title;
 use Livewire\Attributes\Url;
 use Livewire\Component;
@@ -13,19 +14,32 @@ use Livewire\Component;
 #[Title('Calendar')]
 class Calendar extends Component
 {
-    private const VIEWS = ['day', 'week', 'month'];
+    private const VIEWS = ['day', 'week', 'month', 'list'];
+
+    /** The list shows this many weeks at a time, and "Show more" adds as many again. */
+    private const LIST_WEEKS = 2;
+
+    private const MAX_LIST_WEEKS = 12;
 
     #[Url]
     public string $date = ''; // any date inside the visible month / week, or the visible day itself
 
     #[Url]
-    public string $view = 'day'; // day | week | month
+    public string $view = 'day'; // day | week | month | list
+
+    public int $listWeeks = self::LIST_WEEKS;
 
     public function mount(): void
     {
         $this->date = ($this->date !== '' && strtotime($this->date))
             ? CarbonImmutable::parse($this->date)->toDateString()
             : today()->toDateString();
+
+        // A phone opens on the list; the time grid needs a wider screen. The cookie is
+        // set by partials/head, and a view picked in the URL always wins.
+        if (! request()->query->has('view') && request()->cookie('narrow_screen') === '1') {
+            $this->view = 'list';
+        }
 
         if (! in_array($this->view, self::VIEWS, true)) {
             $this->view = 'day';
@@ -35,22 +49,36 @@ class Calendar extends Component
     public function previous(): void
     {
         $this->date = $this->anchor()->sub($this->step())->toDateString();
+        $this->listWeeks = self::LIST_WEEKS;
     }
 
     public function next(): void
     {
         $this->date = $this->anchor()->add($this->step())->toDateString();
+        $this->listWeeks = self::LIST_WEEKS;
     }
 
     public function today(): void
     {
         $this->date = today()->toDateString();
+        $this->listWeeks = self::LIST_WEEKS;
     }
 
     public function setView(string $view): void
     {
         $this->view = in_array($view, self::VIEWS, true) ? $view : 'day';
+        $this->listWeeks = self::LIST_WEEKS;
     }
+
+    /** Stretch the list further ahead instead of paging past what is already on screen. */
+    public function showMore(): void
+    {
+        $this->listWeeks = min(self::MAX_LIST_WEEKS, $this->listWeeks + self::LIST_WEEKS);
+    }
+
+    /** The session sheet changed something: draw the calendar again. */
+    #[On('session-updated')]
+    public function refreshSessions(): void {}
 
     /** Jump to the day view for one date (from a day cell in the month or week view). */
     public function showDay(string $date): void
@@ -68,6 +96,7 @@ class Calendar extends Component
         return match ($this->view) {
             'day' => '1 day',
             'week' => '1 week',
+            'list' => self::LIST_WEEKS.' weeks',
             default => '1 month',
         };
     }
@@ -88,6 +117,10 @@ class Calendar extends Component
             $start = $anchor->startOfWeek(CarbonImmutable::MONDAY);
             $end = $start->addDays(6);
             $title = $start->format('M j').' – '.$end->format($start->month === $end->month ? 'j, Y' : 'M j, Y');
+        } elseif ($this->view === 'list') {
+            $start = $anchor;
+            $end = $anchor->addDays($this->listWeeks * 7 - 1);
+            $title = $start->format($start->year === $end->year ? 'M j' : 'M j, Y').' – '.$end->format('M j, Y');
         } else {
             $start = $anchor->startOfMonth()->startOfWeek(CarbonImmutable::MONDAY);
             $end = $anchor->endOfMonth()->endOfWeek(CarbonImmutable::SUNDAY);
@@ -115,7 +148,7 @@ class Calendar extends Component
 
         // Day and week draw each session at its time of day, side by side where they overlap.
         $placements = [];
-        if ($this->view !== 'month') {
+        if (in_array($this->view, ['day', 'week'], true)) {
             foreach ($sessions as $daySessions) {
                 $placements += CalendarGrid::place($daySessions);
             }
@@ -129,6 +162,9 @@ class Calendar extends Component
             'conflictCount' => count(array_intersect_key($conflicts, $sessions->flatten()->keyBy('id')->all())),
             'month' => $anchor->month,
             'weeks' => array_chunk($days, 7),
+            // The list skips empty days, as a phone's agenda does, but always shows today.
+            'listDays' => array_values(array_filter($days, fn (CarbonImmutable $d) => $sessions->has($d->toDateString()) || $d->isToday())),
+            'canShowMore' => $this->listWeeks < self::MAX_LIST_WEEKS,
             'placements' => $placements,
             'halfHours' => CalendarGrid::halfHours(), // not "slots": Livewire reserves that view variable
             // Open the time grid at the start of the working day, or earlier if a session starts before then.

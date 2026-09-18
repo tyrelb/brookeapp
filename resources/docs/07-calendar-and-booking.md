@@ -2,7 +2,7 @@ Logging is for sessions that already happened. **Booking** is for the future: it
 
 ## The calendar
 
-Open **Calendar** in the sidebar. It opens on today in Day view; switch with the **Day / Week / Month** buttons and move with the arrows or **Today**.
+Open **Calendar** in the sidebar. It opens on today in Day view (List view on a phone); switch with the **Day / Week / Month / List** buttons and move with the arrows or **Today**.
 
 ![Month view for September](/images/docs/calendar-month.png)
 *Month view. Green is completed, purple is scheduled, grey is cancelled. The repeat symbol marks sessions from a repeating booking.*
@@ -19,6 +19,24 @@ Day and Week open at 7 am, or earlier if a session starts before then; scroll th
 - Click an **empty time** on the Day or Week grid to book a session at that time. The form opens with the date and time filled in.
 - Click a **date number** or a week column's heading to see that whole day.
 - Click the **+** on a day to book a session on that date.
+
+## The calendar on your phone
+
+On a phone, the calendar opens in **List** view: the next two weeks as an agenda, one heading per day that has something booked. Each row shows who, where, and the start and end time. Today is always listed, even when it is empty. Tap **Show 2 more weeks** at the bottom to see further ahead; the arrows move two weeks at a time. A session that has finished but hasn't been logged is marked **Not logged yet**. List view works on a computer too: click **List**.
+
+![The List view on a phone](/images/docs/calendar-list-phone.png)
+*On a phone the calendar opens as a list of the days ahead.*
+
+Tap a session and a panel slides up from the bottom of the screen with three choices:
+
+- **Log session** lists everyone who was booked. Set each person to Attended, Missed / late cancel or No-show, and tick the family members who came. Check the total, then tap **Log & charge**. A late cancel needs a reason, which the client sees on their receipt.
+- **Edit** moves the session to a new date, time or length. For a session in a repeat, choose whether later sessions move too. If the new time overlaps another booking you'll see a warning, but you can still save.
+- **Cancel** cancels this session, or this one and the rest of its repeat. No one is charged.
+
+![Logging a session on a phone](/images/docs/session-sheet-phone.png)
+*Logging from the list. The prices are the same ones the session page uses.*
+
+Clients who were sent an invite get an updated invite or a cancellation automatically, just as when you change the session from its own page. For anything else, such as adding clients, changing the service or gym, price overrides or reopening a logged session, tap **Open full session**.
 
 ## Book a session
 

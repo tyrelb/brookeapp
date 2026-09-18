@@ -10,8 +10,9 @@
                 <flux:button :variant="$view === 'day' ? 'primary' : 'outline'" wire:click="setView('day')">Day</flux:button>
                 <flux:button :variant="$view === 'week' ? 'primary' : 'outline'" wire:click="setView('week')">Week</flux:button>
                 <flux:button :variant="$view === 'month' ? 'primary' : 'outline'" wire:click="setView('month')">Month</flux:button>
+                <flux:button :variant="$view === 'list' ? 'primary' : 'outline'" wire:click="setView('list')">List</flux:button>
             </flux:button.group>
-            <flux:button :href="route('sessions.book', ['date' => $date])" icon="calendar" variant="primary" wire:navigate>Book session</flux:button>
+            <flux:button :href="route('sessions.book', ['date' => $date])" icon="calendar" variant="primary" wire:navigate>Book<span class="max-sm:hidden">&nbsp;session</span></flux:button>
         </x-slot:actions>
     </x-page-header>
 
@@ -23,7 +24,80 @@
         </flux:callout>
     @endif
 
-    @if ($view === 'month')
+    @if ($view === 'list')
+        {{-- A phone's agenda: the days ahead that have something booked, each session a row to tap. --}}
+        <div class="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+            @foreach ($listDays as $day)
+                @php($key = $day->toDateString())
+                @php($daySessions = $sessions->get($key, collect()))
+                <section wire:key="ld-{{ $key }}" class="border-b border-zinc-200 last:border-b-0 dark:border-zinc-700">
+                    <h3 class="flex items-center gap-2 border-b border-zinc-100 bg-zinc-50 px-4 py-2 text-sm font-semibold dark:border-zinc-800 dark:bg-zinc-800/60 {{ $key === $today ? 'text-[var(--color-accent-content)]' : 'text-zinc-700 dark:text-zinc-200' }}">
+                        {{ $day->format('l') }} – {{ $day->format('M j') }}
+                        @if ($key === $today)
+                            <flux:badge size="sm" color="purple">Today</flux:badge>
+                        @endif
+                    </h3>
+                    @if ($daySessions->isEmpty())
+                        <p class="px-4 py-3 text-sm text-zinc-500">
+                            Nothing booked today.
+                            <a href="{{ route('sessions.book', ['date' => $key]) }}" wire:navigate class="font-medium text-[var(--color-accent)] hover:underline">Book a session</a>
+                        </p>
+                    @endif
+                    <ul class="divide-y divide-zinc-100 dark:divide-zinc-800">
+                        @foreach ($daySessions as $session)
+                            @php($clash = isset($conflicts[$session->id]))
+                            @php($unlogged = $session->isScheduled() && $session->endsAt()->isPast())
+                            <li wire:key="ls-{{ $session->id }}">
+                                <button type="button" x-on:click="$flux.modal('session-sheet').show(); $wire.dispatch('open-session', { id: {{ $session->id }} })"
+                                        class="flex min-h-16 w-full items-stretch gap-3 px-4 py-3 text-left hover:bg-zinc-50 active:bg-zinc-100 dark:hover:bg-zinc-800/50 dark:active:bg-zinc-800">
+                                    <span class="w-1 shrink-0 rounded-full {{ match ($session->status->value) {
+                                        'completed' => 'bg-green-500',
+                                        'cancelled' => 'bg-zinc-300 dark:bg-zinc-600',
+                                        default => 'bg-[var(--color-accent)]',
+                                    } }}"></span>
+                                    <span class="min-w-0 flex-1">
+                                        <span class="block truncate font-semibold {{ $session->isCancelled() ? 'text-zinc-400 line-through' : 'text-zinc-900 dark:text-zinc-50' }}">
+                                            @if ($clash)<span class="text-amber-600 dark:text-amber-400" title="Overlaps another session">⚠</span>@endif
+                                            {{ $session->displayName() }}
+                                        </span>
+                                        <span class="mt-0.5 flex items-center gap-1 text-sm text-zinc-500">
+                                            <flux:icon.map-pin variant="micro" class="shrink-0" />
+                                            <span class="truncate">{{ $session->gym ? $session->gym->name.' · ' : '' }}{{ $session->service->name }}</span>
+                                            @if ($session->isInSeries())<span class="shrink-0" title="Repeats">↻</span>@endif
+                                        </span>
+                                        @if ($unlogged)
+                                            <span class="mt-0.5 block text-xs font-medium text-amber-700 dark:text-amber-400">Not logged yet</span>
+                                        @elseif (! $session->isScheduled())
+                                            <span class="mt-0.5 block text-xs {{ $session->isCompleted() ? 'text-green-700 dark:text-green-400' : 'text-zinc-400' }}">{{ $session->status->label() }}</span>
+                                        @endif
+                                    </span>
+                                    <span class="shrink-0 text-right text-sm leading-6 tabular-nums">
+                                        <span class="block font-medium text-zinc-900 dark:text-zinc-100">{{ $session->starts_at->format('g:i a') }}</span>
+                                        <span class="block text-zinc-500">{{ $session->endsAt()->format('g:i a') }}</span>
+                                    </span>
+                                </button>
+                            </li>
+                        @endforeach
+                    </ul>
+                </section>
+            @endforeach
+
+            @if ($sessions->isEmpty())
+                <p class="px-4 py-6 text-center text-sm text-zinc-500">
+                    Nothing booked for {{ $title }}.
+                    <a href="{{ route('sessions.book', ['date' => $date]) }}" wire:navigate class="font-medium text-[var(--color-accent)] hover:underline">Book a session</a>
+                </p>
+            @endif
+
+            <div class="border-t border-zinc-200 px-4 py-3 text-center dark:border-zinc-700">
+                @if ($canShowMore)
+                    <flux:button variant="ghost" size="sm" icon="chevron-down" wire:click="showMore">Show 2 more weeks</flux:button>
+                @else
+                    <flux:button variant="ghost" size="sm" icon-trailing="chevron-right" wire:click="next">Next 2 weeks</flux:button>
+                @endif
+            </div>
+        </div>
+    @elseif ($view === 'month')
         <div class="overflow-x-auto rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
             <div class="grid min-w-[840px] grid-cols-7 border-b border-zinc-200 text-xs font-medium text-zinc-500 dark:border-zinc-700">
                 @foreach (['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'] as $dow)
@@ -131,7 +205,7 @@
                                 @php($clash = isset($conflicts[$session->id]))
                                 {{-- Under 45 minutes there is only room for one line, so it carries the start time. --}}
                                 @php($compact = $session->duration_minutes < 45)
-                                @php($who = $session->attendees->pluck('client.full_name')->join(', ') ?: 'No attendees yet')
+                                @php($who = $session->displayName())
                                 @php($when = $session->starts_at->format('g:i a').' – '.$session->endsAt()->format('g:i a'))
                                 <a href="{{ route('sessions.show', $session) }}" wire:navigate wire:key="gs-{{ $session->id }}"
                                    style="top: {{ $place['top'] }}%; height: calc({{ $place['height'] }}% - 1px); left: calc({{ $place['left'] }}% + 2px); width: calc({{ $place['width'] }}% - 4px);"
@@ -190,10 +264,14 @@
         <span><span class="inline-block size-2.5 rounded-sm bg-green-200 align-middle"></span> Completed</span>
         <span><span class="inline-block size-2.5 rounded-sm bg-zinc-200 align-middle"></span> Cancelled</span>
         <span><span class="text-amber-600 dark:text-amber-400">⚠</span> Overlapping bookings</span>
-        @if ($view === 'month')
+        @if ($view === 'list')
+            <span>Tap a session to log, edit or cancel it.</span>
+        @elseif ($view === 'month')
             <span>Click a session to open it, a date to see that whole day, or the + on a day to book.</span>
         @else
             <span>Click a session to open it{{ $view === 'week' ? ", a day's heading to see that whole day," : '' }} or an empty time to book it.</span>
         @endif
     </div>
+
+    <livewire:sessions.session-sheet key="session-sheet" />
 </div>

@@ -1,5 +1,7 @@
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+{{-- Lets the server pick phone-sized layouts (the calendar opens as a list) without a flash. --}}
+<script>document.cookie = 'narrow_screen=' + (window.innerWidth < 1024 ? 1 : 0) + ';path=/;max-age=31536000;SameSite=Lax';</script>
 
 <title>{{ $title ?? config('app.name', 'BrookeApp') }}</title>
 
