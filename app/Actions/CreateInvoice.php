@@ -71,8 +71,11 @@ class CreateInvoice
      */
     private function nextNumber(Client $client): array
     {
+        // withTrashed: a deleted invoice's number may already be in a client's inbox,
+        // so it is never handed out again.
         $sequence = 1 + (int) Invoice::query()
             ->withoutGlobalScope(TrainerScope::class)
+            ->withTrashed()
             ->where('user_id', $client->user_id)
             ->max('sequence');
 

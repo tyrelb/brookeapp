@@ -72,7 +72,7 @@ class WalletTransaction extends Model
     /** The request this money answers, when the trainer said so. Usually null. */
     public function invoice(): BelongsTo
     {
-        return $this->belongsTo(Invoice::class);
+        return $this->belongsTo(Invoice::class)->withTrashed();
     }
 
     /** @return HasMany<WalletTransactionRevision, $this> */

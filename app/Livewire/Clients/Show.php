@@ -11,6 +11,7 @@ use App\Actions\UpdateTransaction;
 use App\Enums\PaymentMethod;
 use App\Enums\TransactionType;
 use App\Exceptions\BillingException;
+use App\Livewire\Concerns\ManagesInvoices;
 use App\Mail\WalletLinkMail;
 use App\Models\Client;
 use App\Models\Invoice;
@@ -27,6 +28,8 @@ use Livewire\Component;
 
 class Show extends Component
 {
+    use ManagesInvoices;
+
     public Client $client;
 
     // Record payment modal
@@ -148,44 +151,6 @@ class Show extends Component
         }
 
         Flux::toast("{$invoice->number} for {$this->moneyLabel($invoice->total)} emailed to {$this->client->email}.", variant: 'success');
-    }
-
-    public function resendInvoice(int $invoiceId): void
-    {
-        $this->authorize('update', $this->client);
-
-        $invoice = $this->invoice($invoiceId);
-
-        try {
-            app(SendInvoice::class)->handle($invoice);
-        } catch (BillingException $e) {
-            Flux::toast($e->getMessage(), variant: 'warning');
-
-            return;
-        }
-
-        Flux::toast("{$invoice->number} emailed to {$this->client->email} again.", variant: 'success');
-    }
-
-    public function voidInvoice(int $invoiceId): void
-    {
-        $this->authorize('update', $this->client);
-
-        $invoice = $this->invoice($invoiceId);
-
-        if ($invoice->isVoided()) {
-            return;
-        }
-
-        // Only the request is cancelled. Any money that already arrived against it
-        // stays in the ledger, because it really did arrive.
-        $invoice->forceFill(['voided_at' => now()])->save();
-
-        if ((int) $this->paymentInvoiceId === $invoice->id) {
-            $this->paymentInvoiceId = '';
-        }
-
-        Flux::toast("{$invoice->number} voided.", variant: 'success');
     }
 
     public function recordPayment(RecordPayment $recordPayment): void
@@ -421,6 +386,18 @@ class Show extends Component
             ->findOrFail($invoiceId);
     }
 
+    /** ManagesInvoices: only this client's invoices. */
+    protected function findInvoice(int $invoiceId): Invoice
+    {
+        return $this->invoice($invoiceId);
+    }
+
+    /** ManagesInvoices: keep Record payment pointing at a request that is still open. */
+    protected function invoicesChanged(): void
+    {
+        $this->paymentInvoiceId = (string) ($this->outstandingInvoices()->first()?->id ?? '');
+    }
+
     /**
      * Still owed, oldest first — what a payment is most likely answering.
      *
@@ -491,7 +468,8 @@ class Show extends Component
                 ->values(),
             'paymentMethods' => auth()->user()->enabledPaymentMethods(),
             'walletUrl' => $this->client->portalUrl(),
-            'invoices' => $this->client->invoices()->withPaidAmount()->limit(50)->get(),
+            'invoices' => $this->client->invoices()->withPaidAmount()->withPaidOn()->limit(50)->get(),
+            'markPaidInvoice' => $this->markPaidInvoice(),
             'openInvoices' => $this->outstandingInvoices(),
             'suggestion' => app(PaymentRequestSuggester::class)->for($this->client),
             'requestTotals' => $this->requestTotals(),

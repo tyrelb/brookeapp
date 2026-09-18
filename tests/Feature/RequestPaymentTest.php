@@ -196,5 +196,5 @@ it('will not let one trainer touch another trainer\'s request', function () {
     $plan = packagePlan($this->trainer, $this->service);
     $mine = Client::factory()->create(['user_id' => $this->trainer->id, 'plan_id' => $plan->id, 'email' => 'e@example.com']);
 
-    Livewire::test(Show::class, ['client' => $mine])->call('resendInvoice', $theirInvoice->id);
+    Livewire::test(Show::class, ['client' => $mine])->call('remindInvoice', $theirInvoice->id);
 })->throws(ModelNotFoundException::class);

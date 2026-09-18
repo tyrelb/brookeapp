@@ -85,6 +85,19 @@ The email shows the breakdown, the trainer's accepted payment methods and e-Tran
 and a link to the client's wallet page, which lists anything still outstanding. Emails are
 queued, so a worker must be running.
 
+**Pricing → Invoices** lists every invoice, open ones first (soonest due at the top), with
+totals for what is outstanding, overdue and received this month, a search, and Open /
+Overdue / Paid / Void / All filters. The same row actions appear there and on a client's page:
+
+- **Remind** emails the invoice again worded as a reminder, with anything already received
+  and what is left. The row shows when it was last chased.
+- **Mark paid** records a real payment against the invoice (amount pre-filled with what is
+  outstanding; less leaves it partly paid) and, unless unticked, emails the client a
+  thank-you with their new balance. Their wallet page then lists it as **Paid** with the date.
+- **Void** cancels the ask while something is still owed; money already received stays.
+- **Delete** is for mistakes, and only while nothing has been received. It is a soft delete,
+  so the number is never handed to another client.
+
 ## Production (Laravel Forge, MySQL 8)
 
 1. Create a site with PHP 8.5 and a MySQL 8 database.

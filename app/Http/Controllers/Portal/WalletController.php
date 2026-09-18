@@ -52,6 +52,15 @@ class WalletController extends Controller
                 ->get()
                 ->sortBy([['issued_on', 'asc'], ['id', 'asc']])
                 ->values(),
+            // Settled in the last year, so the client can see a request they paid was received.
+            'paidInvoices' => $client->invoices()
+                ->withoutGlobalScope(TrainerScope::class)
+                ->settled()
+                ->withPaidAmount()
+                ->withPaidOn()
+                ->whereDate('issued_on', '>=', today()->subYear())
+                ->limit(10)
+                ->get(),
             'view' => $view,
             'token' => $token,
         ];

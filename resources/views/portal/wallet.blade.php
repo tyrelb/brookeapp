@@ -86,6 +86,26 @@
         </section>
     @endif
 
+    @if ($paidInvoices->isNotEmpty())
+        <section class="mt-6 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-800">
+            <flux:heading>{{ $invoices->isEmpty() ? 'Invoices' : 'Paid invoices' }}</flux:heading>
+            <div class="mt-2 divide-y divide-zinc-100 text-sm dark:divide-zinc-700">
+                @foreach ($paidInvoices as $invoice)
+                    <div class="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 py-2">
+                        <div class="min-w-0">
+                            <span class="font-medium">{{ $invoice->number }}</span>
+                            <span class="text-zinc-500">· {{ $invoice->issued_on->format('M j, Y') }} · {{ collect($invoice->lines)->pluck('description')->join(', ') }}</span>
+                        </div>
+                        <div class="flex items-center gap-3">
+                            <span class="tabular-nums">{{ money($invoice->total) }}</span>
+                            <flux:badge size="sm" color="green">Paid{{ $invoice->paidOn() ? ' '.$invoice->paidOn()->format('M j') : '' }}</flux:badge>
+                        </div>
+                    </div>
+                @endforeach
+            </div>
+        </section>
+    @endif
+
     <section class="mt-6 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-800">
         <flux:heading>Book or change a session</flux:heading>
         <flux:text class="mt-2 text-sm">Only {{ $trainer->displayName() }} can book, move or cancel sessions. Please get in touch directly:</flux:text>

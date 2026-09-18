@@ -120,7 +120,11 @@ class DatabaseSeeder extends Seeder
             $clients['Hana'], 1200, now()->subDays(3), now()->addDays(4),
             'Whenever suits — this covers your next 20 sessions.',
         );
-        $outstanding->forceFill(['sent_at' => now()->subDays(3)])->save();
+        $outstanding->forceFill(['sent_at' => now()->subDays(3), 'reminded_at' => now()->subDay(), 'reminder_count' => 1])->save();
+
+        // Raised by mistake and voided, so the Void filter on the Invoices page has a row.
+        $voided = app(CreateInvoice::class)->handle($clients['Ben'], 300, now()->subDays(10), now()->subDays(3));
+        $voided->forceFill(['sent_at' => now()->subDays(10), 'voided_at' => now()->subDays(9)])->save();
 
         $settled = app(CreateInvoice::class)->handle($clients['Ava'], 600, now()->subMonths(1), now()->subMonths(1)->addDays(7));
         $settled->forceFill(['sent_at' => now()->subMonths(1)])->save();

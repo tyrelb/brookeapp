@@ -6,6 +6,7 @@ use App\Livewire\Admin;
 use App\Livewire\Clients;
 use App\Livewire\Dashboard;
 use App\Livewire\Docs;
+use App\Livewire\Invoices;
 use App\Livewire\Plans;
 use App\Livewire\Reports;
 use App\Livewire\Services;
@@ -38,6 +39,8 @@ Route::middleware(['auth', 'not-suspended', 'verified'])->group(function () {
     Route::get('plans', Plans\Index::class)->name('plans.index');
     Route::get('plans/create', Plans\Form::class)->name('plans.create');
     Route::get('plans/{plan}/edit', Plans\Form::class)->name('plans.edit');
+
+    Route::get('invoices', Invoices\Index::class)->name('invoices.index');
 
     Route::get('sessions', Sessions\Index::class)->name('sessions.index');
     Route::get('sessions/calendar', Sessions\Calendar::class)->name('sessions.calendar');

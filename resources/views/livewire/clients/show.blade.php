@@ -104,23 +104,16 @@
                 </flux:table.columns>
                 <flux:table.rows>
                     @foreach ($invoices as $invoice)
-                        @php($status = $invoice->status())
-                        <flux:table.row :key="'invoice-'.$invoice->id" @class(['opacity-60 line-through' => $invoice->isVoided()])>
-                            <flux:table.cell variant="strong">{{ $invoice->number }}</flux:table.cell>
+                        @php($invoice->setRelation('client', $client))
+                        <flux:table.row :key="'invoice-'.$invoice->id" @class(['opacity-60' => $invoice->isVoided()])>
+                            <flux:table.cell variant="strong" @class(['line-through' => $invoice->isVoided()])>{{ $invoice->number }}</flux:table.cell>
                             <flux:table.cell>{{ $invoice->issued_on->format('M j, Y') }}</flux:table.cell>
                             <flux:table.cell>{{ $invoice->due_on?->format('M j, Y') ?? '—' }}</flux:table.cell>
                             <flux:table.cell>{{ collect($invoice->lines)->pluck('description')->join(', ') }}</flux:table.cell>
                             <flux:table.cell align="end" class="tabular-nums">{{ money($invoice->total) }}</flux:table.cell>
                             <flux:table.cell align="end" class="tabular-nums">{{ $invoice->paidAmount() > 0 ? money($invoice->paidAmount()) : '—' }}</flux:table.cell>
-                            <flux:table.cell><flux:badge size="sm" :color="$status->color()">{{ $status->label() }}</flux:badge></flux:table.cell>
-                            <flux:table.cell>
-                                @unless ($invoice->isVoided())
-                                    <div class="flex justify-end gap-2">
-                                        <flux:button size="xs" variant="ghost" wire:click="resendInvoice({{ $invoice->id }})" wire:confirm="Email {{ $invoice->number }} to {{ $client->email ?: 'this client (no email on file)' }} again?">Resend</flux:button>
-                                        <flux:button size="xs" variant="ghost" wire:click="voidInvoice({{ $invoice->id }})" wire:confirm="Void {{ $invoice->number }}? Any payment already recorded against it stays on the ledger.">Void</flux:button>
-                                    </div>
-                                @endunless
-                            </flux:table.cell>
+                            <flux:table.cell>@include('livewire.invoices.partials.status')</flux:table.cell>
+                            <flux:table.cell>@include('livewire.invoices.partials.row-actions')</flux:table.cell>
                         </flux:table.row>
                     @endforeach
                 </flux:table.rows>
@@ -286,6 +279,8 @@
             </div>
         </form>
     </flux:modal>
+
+    @include('livewire.invoices.partials.mark-paid-modal')
 
     <flux:modal name="record-payment" class="md:w-[28rem]">
         <form wire:submit="recordPayment" class="space-y-5">

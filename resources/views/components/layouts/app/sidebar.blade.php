@@ -22,6 +22,7 @@
                 <flux:navlist.group heading="Pricing" class="grid">
                     <flux:navlist.item icon="rectangle-stack" :href="route('plans.index')" :current="request()->routeIs('plans.*')" wire:navigate>Plans</flux:navlist.item>
                     <flux:navlist.item icon="sparkles" :href="route('services.index')" :current="request()->routeIs('services.*')" wire:navigate>Services</flux:navlist.item>
+                    <flux:navlist.item icon="document-text" :href="route('invoices.index')" :current="request()->routeIs('invoices.*')" wire:navigate>Invoices</flux:navlist.item>
                 </flux:navlist.group>
 
                 @if (auth()->user()->isAdmin())

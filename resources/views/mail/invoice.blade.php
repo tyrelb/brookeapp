@@ -1,9 +1,11 @@
 <x-mail::message>
-# {{ $client->isOnMonthlyPlan() ? 'Your membership fee' : 'Time to top up your Fitness Wallet' }}
+# {{ $reminder ? 'A friendly reminder' : ($client->isOnMonthlyPlan() ? 'Your membership fee' : 'Time to top up your Fitness Wallet') }}
 
 Hi {{ $client->isOnFamilyPlan() ? 'there' : $client->first_name }},
 
-@if ($client->isOnMonthlyPlan())
+@if ($reminder)
+Just a reminder that **{{ $invoice->number }}** {!! $dueWording !!}. If you've already sent it, thank you, and please ignore this.
+@elseif ($client->isOnMonthlyPlan())
 Here's your {{ $invoice->issued_on->format('F Y') }} membership fee for **{{ $client->plan?->name }}**.
 @elseif ($balance < 0)
 Your Fitness Wallet is overdrawn by **{{ money(abs($balance)) }}**. Here's a request to bring it back up so you're ready for your next session.
@@ -23,6 +25,10 @@ You have **{{ money($balance) }}** in your Fitness Wallet. Here's a request to t
 | GST ({{ rtrim(rtrim(number_format((float) $invoice->gst_rate, 2), '0'), '.') }}%) | {{ money($invoice->gst_amount) }} |
 @endif
 | **Total** | **{{ money($invoice->total) }}** |
+@if ($reminder && $paid > 0)
+| Received so far | {{ money(-$paid) }} |
+| **Still to pay** | **{{ money($outstanding) }}** |
+@endif
 </x-mail::table>
 
 {{-- An echo, not @if: PHP swallows the newline after a directive's closing tag, which
