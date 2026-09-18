@@ -200,7 +200,12 @@
                         @php($session = $attendance->trainingSession)
                         <flux:table.row :key="$attendance->id">
                             <flux:table.cell><flux:link :href="route('sessions.show', $session)" wire:navigate>{{ $session->starts_at->format('D M j, Y g:i a') }}</flux:link></flux:table.cell>
-                            <flux:table.cell>{{ $session->service->name }}</flux:table.cell>
+                            <flux:table.cell>
+                                {{ $session->service->name }}
+                                @if ($attendance->client_note)
+                                    <div class="text-xs text-zinc-500" title="Shown to the client">“{{ $attendance->client_note }}”</div>
+                                @endif
+                            </flux:table.cell>
                             <flux:table.cell>
                                 {{ \App\Models\Plan::headcountLabel($session->headcount()) }} ({{ $session->headcount() }})
                                 @if ($attendance->members->where('attended', true)->isNotEmpty())
@@ -208,8 +213,8 @@
                                 @endif
                             </flux:table.cell>
                             <flux:table.cell>
-                                @if (! $attendance->attended)
-                                    <flux:badge size="sm" color="zinc">No-show</flux:badge>
+                                @if ($attendance->attendance() !== \App\Enums\Attendance::Attended)
+                                    <flux:badge size="sm" :color="$attendance->attendance()->color()">{{ $attendance->attendance()->label() }}</flux:badge>
                                 @else
                                     <flux:badge size="sm" :color="$session->status->color()">{{ $session->status->label() }}</flux:badge>
                                 @endif

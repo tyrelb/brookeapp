@@ -27,7 +27,7 @@ class SessionPricer
      *     rateTier: string,
      *     total: float,
      *     rows: array<int, array{
-     *         line: AttendeeLine, attended: bool, people: int,
+     *         line: AttendeeLine, attended: bool, people: int, late_cancel: bool,
      *         subtotal: ?float, gst: ?float, total: ?float,
      *         members: array<int, array{id: int, name: string, subtotal: float}>,
      *         error: ?string,
@@ -45,6 +45,7 @@ class SessionPricer
                 'line' => $line,
                 'attended' => $line->attended(),
                 'people' => $line->people,
+                'late_cancel' => $line->lateCancel,
                 'subtotal' => null,
                 'gst' => null,
                 'total' => null,

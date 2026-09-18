@@ -46,7 +46,7 @@
                         <flux:table.cell>{{ $session->service->name }}@if ($session->isInSeries()) <a href="{{ route('sessions.index', ['series' => $session->session_series_id]) }}" wire:navigate title="{{ $session->series?->describe() }}"><flux:icon.arrow-path class="inline size-3.5 text-zinc-400" /></a>@endif @if ($session->gym)<div class="text-xs text-zinc-500">{{ $session->gym->name }}</div>@endif</flux:table.cell>
                         <flux:table.cell class="whitespace-normal">
                             @foreach ($session->attendees as $attendee)
-                                <span class="{{ $attendee->attended ? '' : 'line-through text-zinc-400' }}">{{ $attendee->client->full_name }}</span>@if (! $loop->last), @endif
+                                <span class="{{ $attendee->attendance() === \App\Enums\Attendance::Attended ? '' : 'line-through text-zinc-400' }}" @if ($attendee->isLateCancel()) title="Late cancel — charged" @endif>{{ $attendee->client->full_name }}</span>@if (! $loop->last), @endif
                             @endforeach
                         </flux:table.cell>
                         <flux:table.cell>{{ \App\Models\Plan::headcountLabel($session->headcount()) }} ({{ $session->headcount() }})</flux:table.cell>

@@ -13,13 +13,13 @@ use Illuminate\Support\Collection;
  * The arithmetic itself lives in SessionPricer, which is also what CompleteTrainingSession
  * uses, so the preview cannot quote a price the charge then disagrees with.
  *
- * @property array<int, array{attended: bool, override: string, members?: array<int, array{attended: bool, override: string}>}> $attendees keyed by client id
+ * @property array<int, array{attendance: string, override: string, client_note?: string, members?: array<int, array{attended: bool, override: string}>}> $attendees keyed by client id
  */
 trait PreviewsCharges
 {
     /**
      * @param  Collection<int, Client>  $clients  keyed by id, with plan.rates and members loaded
-     * @return array{people: int, headcount: int, tier: string, rateTier: string, total: float, rows: array<int, array{client: Client, attended: bool, people: int, subtotal: ?float, gst: ?float, total: ?float, members: array<int, array{id: int, name: string, subtotal: float}>, error: ?string}>}
+     * @return array{people: int, headcount: int, tier: string, rateTier: string, total: float, rows: array<int, array{client: Client, attended: bool, people: int, late_cancel: bool, subtotal: ?float, gst: ?float, total: ?float, members: array<int, array{id: int, name: string, subtotal: float}>, error: ?string}>}
      */
     protected function previewCharges(?Service $service, Collection $clients): array
     {
@@ -41,6 +41,7 @@ trait PreviewsCharges
                 'client' => $row['line']->client,
                 'attended' => $row['attended'],
                 'people' => $row['people'],
+                'late_cancel' => $row['late_cancel'],
                 'subtotal' => $row['subtotal'],
                 'gst' => $row['gst'],
                 'total' => $row['total'],

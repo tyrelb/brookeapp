@@ -274,7 +274,7 @@ it('books a cover session for later without pricing it yet', function () {
 
     // Ticking cover clears any clients already picked, and drops the repeat option.
     $form = Livewire::test(Log::class, ['mode' => 'book'])
-        ->set('attendees', [$this->clients->first()->id => ['attended' => true]])
+        ->set('attendees', [$this->clients->first()->id => ['attendance' => 'attended']])
         ->set('repeat', true)
         ->set('cover', true);
 

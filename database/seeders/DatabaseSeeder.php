@@ -194,6 +194,24 @@ class DatabaseSeeder extends Seeder
             app(CompleteTrainingSession::class)->handle($session->fresh(), $session->starts_at->copy()->addHour());
         }
 
+        // A partner session Chloe cancelled late: both pay the partner rate, and the gym
+        // only charges for Ben, the one who was in the room.
+        $late = TrainingSession::create([
+            'user_id' => $brooke->id,
+            'service_id' => $pt->id,
+            'starts_at' => now()->subDays(5)->setTime(12, 0),
+            'duration_minutes' => $pt->duration_minutes,
+            'status' => SessionStatus::Scheduled,
+        ]);
+        $late->attendees()->create(['client_id' => $clients['Ben']->id, 'attended' => true]);
+        $late->attendees()->create([
+            'client_id' => $clients['Chloe']->id,
+            'attended' => true,
+            'late_cancelled' => true,
+            'client_note' => 'Cancelled an hour before — sessions need 24 hours\' notice',
+        ]);
+        app(CompleteTrainingSession::class)->handle($late, $late->starts_at->copy()->addHour());
+
         // Top-ups so most wallets stay positive.
         app(RecordPayment::class)->handle($clients['Ava'], 300, PaymentMethod::ETransfer, now()->subWeeks(2));
         app(RecordPayment::class)->handle($clients['Chloe'], 200, PaymentMethod::Cash, now()->subWeeks(1));

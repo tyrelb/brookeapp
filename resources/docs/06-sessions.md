@@ -15,15 +15,19 @@ Click **Log session** on the dashboard, the Sessions page, or a client's page.
 *Two attendees make it a Partner session. Each person is charged the partner rate from their own plan, plus GST.*
 
 4. The badge above the table shows the **tier** ("Partner session · 2 people"). Groups of five or more are named by their size and billed at the Quad rate. Each attendee row shows what they will be charged, worked out from *their* plan, so two people on different plans pay different amounts for the same hour.
-5. Untick **Attended** for a no-show. They stay on the record but are not charged, and the tier drops to match the people who did come.
-6. **A family client** adds one row with its members listed underneath. Tick the ones who came; **select all** ticks the lot. The tier counts people, not rows, so two Barnes members and one other client make it a Triple session for all three, and the family's wallet is charged twice at the triple rate. A family with nobody ticked is not charged, and the form asks you to pick someone before it will complete.
-7. Use **Price override** to charge someone a different before-GST amount just this once, for example a trial rate. Family members have their own override each, so one child can be priced differently without touching the rest. The preview updates as you type.
+5. Change **Attendance** for anyone who didn't train:
+    - **Missed / late cancel** charges them as if they came, at the rate for the group as it was booked, so the people who did come aren't pushed up to a smaller group's rate. They don't count toward what the gym charges you. A reason is required, because it's what the client reads on their receipt and wallet page.
+    - **No-show** keeps them on the record without charging them, and the tier drops to match the people who did come.
+6. **A family client** adds one row with its members listed underneath. Tick the ones who came; **select all** ticks the lot. The tier counts people, not rows, so two Barnes members and one other client make it a Triple session for all three, and the family's wallet is charged twice at the triple rate. A family with nobody ticked is not charged, and the form asks you to pick someone before it will complete. To charge a family's late cancel, set it to **Missed / late cancel** and tick the members who were booked.
+7. Use **Price override** to charge someone a different before-GST amount just this once, for example a trial rate, or a reduced fee for a late cancel. Family members have their own override each, so one child can be priced differently without touching the rest. The preview updates as you type.
+8. The box under each client's name is a **note the client sees**. It goes on their receipt, their wallet activity and their training history, so write it for them. For a late cancel it holds the reason and must be filled in. For everyone else it's optional, e.g. "Includes the extra 15 minutes". Your own **Notes** field above stays private.
+9. The amber **You pay *gym*** box shows what the gym charges you for this session, counting only the people who were in the room. Untick **Charge *gym* for this session** if it shouldn't bill you, and the session is left off the gym usage report. If nobody was in the room, the box says so and the gym isn't charged at all.
 
 ![The form with a price override on one attendee](/images/docs/log-session-override.png)
 *A one-off override for Ava. Ben is still on his plan rate.*
 
-8. Tick **Email attendees a receipt** if you want each person to get a summary and their remaining balance. The default comes from Settings → Business. A family gets one email, listing who trained and what each of them cost.
-9. Click **Complete & charge**. The charges are posted and you are taken to the session page.
+10. Tick **Email attendees a receipt** if you want each person to get a summary and their remaining balance. The default comes from Settings → Business. A family gets one email, listing who trained and what each of them cost. A late cancel gets a late-cancellation receipt with your reason.
+11. Click **Complete & charge**. The charges are posted and you are taken to the session page.
 
 > **Tip:** **Save as scheduled** stores the session without charging anyone. Use it for a session that is still in the future, or if you want to finish the attendance list later.
 
@@ -64,7 +68,8 @@ Filter by **status** or pick a **month**. Click a date to open the session.
 
 - **Email receipts** sends (or resends) the receipt to everyone who attended and has an email address.
 - **Reopen** is how you fix a mistake. It voids every charge from this session so you can correct the attendance, then charge again.
-- The **Gym** panel lets you change which gym the session counts toward, or untick **Counts toward gym usage** if the gym should not charge you for it.
+- The **Gym** panel lets you change which gym the session counts toward, or untick **Counts toward gym usage** if the gym should not charge you for it. If everyone cancelled late or didn't show, it says nobody was in the room and there is nothing to untick.
+- Each client's **Attendance** and any note you left for them are shown beside their charge.
 
 ## Fix a session with Reopen
 
@@ -73,5 +78,5 @@ Filter by **status** or pick a **month**. Click a date to open the session.
 ![The same session after Reopen, with attendance editable again](/images/docs/session-reopen.png)
 *After Reopen you can tick and untick attendees, add people, set overrides, and complete again.*
 
-2. Correct the attendance: untick a no-show, add someone you forgot with **Add clients**, or set an override.
+2. Correct the attendance: mark a no-show or a late cancel, add someone you forgot with **Add clients**, or set an override. Late cancels and their reasons survive the reopen, so you only change what was wrong.
 3. Click **Complete & charge**. New charges are posted at the corrected tier. The voided charges stay visible in each client's ledger, struck through, so the trail is clear.

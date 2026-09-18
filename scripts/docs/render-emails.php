@@ -30,13 +30,16 @@ if (! is_dir($dir)) {
 $ava = Client::where('first_name', 'Ava')->firstOrFail();
 $upcoming = TrainingSession::where('status', 'scheduled')->whereHas('clients', fn ($q) => $q->whereKey($ava->id))->orderBy('starts_at')->firstOrFail();
 $receiptFor = SessionAttendee::whereHas('trainingSession', fn ($q) => $q->where('status', 'completed'))
-    ->where('client_id', $ava->id)->where('attended', true)->latest('id')->firstOrFail();
+    ->where('client_id', $ava->id)->where('attended', true)->where('late_cancelled', false)->latest('id')->firstOrFail();
+$lateCancel = SessionAttendee::whereHas('trainingSession', fn ($q) => $q->where('status', 'completed'))
+    ->where('attended', true)->where('late_cancelled', true)->latest('id')->firstOrFail();
 
 file_put_contents("$dir/email-invite.html", (new SessionBookedMail($upcoming, $ava))->render());
 file_put_contents("$dir/email-receipt.html", (new SessionCompletedMail($receiptFor))->render());
+file_put_contents("$dir/email-receipt-late-cancel.html", (new SessionCompletedMail($lateCancel))->render());
 file_put_contents("$dir/email-wallet-link.html", (new WalletLinkMail($ava))->render());
 
 $invoice = Invoice::whereNull('voided_at')->orderByDesc('id')->firstOrFail();
 file_put_contents("$dir/email-invoice.html", (new InvoiceMail($invoice))->render());
 
-echo "rendered 4 emails to $dir\n";
+echo "rendered 5 emails to $dir\n";

@@ -8,7 +8,7 @@ Each client has a private web page that shows their side of the story: balance, 
 - **Fitness Wallet balance** (or **Account balance** for a member) with a sentence explaining what it means.
 - **Your plan** and how it bills, and **How to pay** with your accepted methods and e-Transfer address.
 - **Book or change a session** repeats that only you can book, move or cancel, with your booking instructions, phone and email.
-- **Upcoming sessions**, then **Activity** (deposits and charges) and **Training history** (sessions, with a "Missed" badge for no-shows). Long lists are split into pages.
+- **Upcoming sessions**, then **Activity** (deposits and charges) and **Training history** (sessions, with a "Missed / late cancel" badge and your reason for a charged late cancel, and a "No-show" badge for one that wasn't charged). Long lists are split into pages.
 
 Switch to **Calendar** with the buttons beside "Your sessions" to see the month at a glance, with arrows for previous and next months.
 

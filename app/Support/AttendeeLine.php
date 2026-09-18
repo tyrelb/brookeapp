@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\Attendance;
 use App\Models\Client;
 use App\Models\SessionAttendee;
 
@@ -13,6 +14,9 @@ use App\Models\SessionAttendee;
  * "Attended" is derived from the people count rather than stored beside it: a family
  * marked as attending with nobody ticked would otherwise count towards everyone
  * else's rate tier while being charged nothing.
+ *
+ * A late cancel is priced exactly like an attendance — same people, same tier — and only
+ * carries the flag so the gym side can leave them out of the room.
  */
 final class AttendeeLine
 {
@@ -24,18 +28,19 @@ final class AttendeeLine
         public readonly ?float $override,
         public readonly array $members,
         public readonly int $people,
+        public readonly bool $lateCancel,
     ) {}
 
     /**
      * @param  list<MemberLine>  $members
      */
-    public static function for(Client $client, bool $attended, ?float $override, array $members = []): self
+    public static function for(Client $client, bool $attended, ?float $override, array $members = [], bool $lateCancel = false): self
     {
         $people = $client->isOnFamilyPlan()
             ? count(array_filter($members, fn (MemberLine $member) => $member->attended))
             : ($attended ? 1 : 0);
 
-        return new self($client, $override, $members, $people);
+        return new self($client, $override, $members, $people, $lateCancel && $people > 0);
     }
 
     /** From the Livewire state of a booking form. */
@@ -52,7 +57,15 @@ final class AttendeeLine
             );
         }
 
-        return self::for($client, (bool) ($state['attended'] ?? false), self::amount($state['override'] ?? null), $members);
+        $attendance = Attendance::fromInput($state['attendance'] ?? null);
+
+        return self::for(
+            $client,
+            $attendance !== Attendance::NoShow,
+            self::amount($state['override'] ?? null),
+            $members,
+            $attendance === Attendance::LateCancel,
+        );
     }
 
     /** From rows already saved against a session. */
@@ -73,6 +86,7 @@ final class AttendeeLine
             (bool) $attendee->attended,
             $attendee->price_override !== null ? (float) $attendee->price_override : null,
             $members,
+            (bool) $attendee->late_cancelled,
         );
     }
 

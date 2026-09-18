@@ -147,9 +147,6 @@
                             <thead class="bg-zinc-50 text-xs text-zinc-500 dark:bg-zinc-800">
                                 <tr>
                                     <th class="px-3 py-2 text-left font-normal">Client</th>
-                                    @unless ($isBooking)
-                                        <th class="px-3 py-2 text-left font-normal">Attended</th>
-                                    @endunless
                                     <th class="px-3 py-2 text-left font-normal">Price override</th>
                                     <th class="px-3 py-2 text-right font-normal">{{ $isBooking ? 'Expected charge' : 'Charge' }}</th>
                                     <th></th>
@@ -164,14 +161,11 @@
                                             <div class="text-xs text-zinc-500">
                                                 {{ $row['client']->plan?->name ?? 'No plan' }}{{ $isBooking ? ' · '.($row['client']->email ?: 'no email') : '' }}
                                                 @if ($isFamily)
-                                                    · {{ $row['people'] }} of {{ count($attendees[$clientId]['members'] ?? []) }} attending
+                                                    · {{ $row['people'] }} of {{ count($attendees[$clientId]['members'] ?? []) }} {{ $row['late_cancel'] ? 'booked' : 'attending' }}
                                                     <button type="button" class="ml-1 underline decoration-dotted underline-offset-2" wire:click="toggleAllMembers({{ $clientId }}, {{ $row['people'] ? 'false' : 'true' }})">{{ $row['people'] ? 'clear' : 'select all' }}</button>
                                                 @endif
                                             </div>
                                         </td>
-                                        @unless ($isBooking)
-                                            <td class="px-3 py-2">@unless ($isFamily)<flux:checkbox wire:model.live="attendees.{{ $clientId }}.attended" />@endunless</td>
-                                        @endunless
                                         <td class="px-3 py-2">@unless ($isFamily)<flux:input wire:model.live.debounce.400ms="attendees.{{ $clientId }}.override" type="number" step="0.01" min="0" placeholder="Plan rate" class="w-28" />@endunless</td>
                                         <td class="px-3 py-2 text-right tabular-nums">
                                             @if (! $row['attended'])
@@ -184,9 +178,15 @@
                                                 <div>{{ money($row['total']) }}</div>
                                                 <div class="text-xs text-zinc-500">{{ money($row['subtotal']) }} + {{ money($row['gst']) }} GST</div>
                                             @endif
+                                            @if ($row['late_cancel'])
+                                                <div class="text-xs text-amber-700 dark:text-amber-400">Late cancel</div>
+                                            @endif
                                         </td>
                                         <td class="px-3 py-2 text-right"><flux:button size="xs" variant="ghost" icon="x-mark" wire:click="removeClient({{ $clientId }})" /></td>
                                     </tr>
+                                    @unless ($isBooking)
+                                        @include('livewire.sessions.partials.attendee-controls', ['clientId' => $clientId, 'client' => $row['client'], 'state' => $attendees[$clientId] ?? [], 'colspan' => 4])
+                                    @endunless
                                     @if ($isFamily)
                                         @foreach ($attendees[$clientId]['members'] ?? [] as $memberId => $member)
                                             @php($charge = collect($row['members'])->firstWhere('id', (int) $memberId))
@@ -195,7 +195,6 @@
                                                 <td class="py-1.5 pl-8 pr-3">
                                                     <flux:checkbox wire:model.live="attendees.{{ $clientId }}.members.{{ $memberId }}.attended" :label="$memberName" />
                                                 </td>
-                                                @unless ($isBooking)<td></td>@endunless
                                                 <td class="px-3 py-1.5"><flux:input wire:model.live.debounce.400ms="attendees.{{ $clientId }}.members.{{ $memberId }}.override" type="number" step="0.01" min="0" placeholder="Plan rate" class="w-28" size="sm" /></td>
                                                 <td class="px-3 py-1.5 text-right tabular-nums text-zinc-500">{{ $charge ? money($charge['subtotal']) : '—' }}</td>
                                                 <td></td>
@@ -206,7 +205,7 @@
                             </tbody>
                             <tfoot>
                                 <tr class="border-t border-zinc-200 font-medium dark:border-zinc-700">
-                                    <td class="px-3 py-2" colspan="{{ $isBooking ? 2 : 3 }}">{{ $isBooking ? 'Expected total when completed' : 'Total to Fitness Wallets' }}</td>
+                                    <td class="px-3 py-2" colspan="2">{{ $isBooking ? 'Expected total when completed' : 'Total to Fitness Wallets' }}</td>
                                     <td class="px-3 py-2 text-right tabular-nums">{{ money($preview['total']) }}</td>
                                     <td></td>
                                 </tr>
@@ -222,27 +221,43 @@
                     @if (! $gymCharge['charges'])
                         <p class="mt-4 text-xs text-zinc-500">{{ $gymCharge['name'] }} charges a flat monthly rate — this session adds nothing.</p>
                     @elseif ($gymCharge['people'] < 1)
-                        <p class="mt-4 text-xs text-zinc-500">Add clients to see what {{ $gymCharge['name'] }} charges you.</p>
+                        @if (empty($preview['rows']) || $isBooking)
+                            <p class="mt-4 text-xs text-zinc-500">Add clients to see what {{ $gymCharge['name'] }} charges you.</p>
+                        @else
+                            <p class="mt-4 text-xs text-zinc-500">Nobody in the room, so {{ $gymCharge['name'] }} won't charge for this session.</p>
+                        @endif
                     @elseif ($gymCharge['rate'] === null)
                         <p class="mt-4 text-xs text-zinc-500">No hourly rate set for {{ $gymCharge['name'] }} at this group size — <a href="{{ route('settings.gyms') }}" wire:navigate class="underline">add one</a>.</p>
                     @else
-                        <div class="mt-4 flex items-center justify-between gap-3 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-800/60 dark:bg-amber-900/20">
-                            <div class="min-w-0">
-                                <div class="flex items-center gap-1.5 text-sm font-medium text-amber-900 dark:text-amber-200">
-                                    <flux:icon.building-office-2 variant="micro" />
-                                    You pay {{ $gymCharge['name'] }}
+                        @php($chargeGym = $isBooking || $gymBillable)
+                        <div class="mt-4 rounded-lg border border-amber-200 bg-amber-50 px-3 py-2 dark:border-amber-800/60 dark:bg-amber-900/20">
+                            <div class="flex items-center justify-between gap-3">
+                                <div class="min-w-0">
+                                    <div class="flex items-center gap-1.5 text-sm font-medium text-amber-900 dark:text-amber-200">
+                                        <flux:icon.building-office-2 variant="micro" />
+                                        You pay {{ $gymCharge['name'] }}
+                                    </div>
+                                    <div class="mt-0.5 text-xs text-amber-800/80 dark:text-amber-200/70">
+                                        @if ($chargeGym)
+                                            {{ money($gymCharge['rate']) }}/hour
+                                            @if ($gymCharge['minutes'] !== null)
+                                                &times; {{ $gymCharge['minutes'] }} min
+                                            @endif
+                                            · before GST · not billed to clients
+                                        @else
+                                            Not charged — left off {{ $gymCharge['name'] }}'s usage report
+                                        @endif
+                                    </div>
                                 </div>
-                                <div class="mt-0.5 text-xs text-amber-800/80 dark:text-amber-200/70">
-                                    {{ money($gymCharge['rate']) }}/hour
-                                    @if ($gymCharge['minutes'] !== null)
-                                        &times; {{ $gymCharge['minutes'] }} min
-                                    @endif
-                                    · before GST · not billed to clients
+                                <div class="shrink-0 text-right tabular-nums font-medium text-amber-900 dark:text-amber-200 {{ $chargeGym ? '' : 'line-through opacity-60' }}">
+                                    {{ $gymCharge['amount'] === null ? '—' : money($gymCharge['amount']) }}
                                 </div>
                             </div>
-                            <div class="shrink-0 text-right tabular-nums font-medium text-amber-900 dark:text-amber-200">
-                                {{ $gymCharge['amount'] === null ? '—' : money($gymCharge['amount']) }}
-                            </div>
+                            @unless ($isBooking)
+                                <div class="mt-2 border-t border-amber-200/70 pt-2 dark:border-amber-800/40">
+                                    <flux:checkbox wire:model.live="gymBillable" label="Charge {{ $gymCharge['name'] }} for this session" />
+                                </div>
+                            @endunless
                         </div>
                     @endif
                 @endif

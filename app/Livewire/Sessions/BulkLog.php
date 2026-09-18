@@ -44,8 +44,11 @@ class BulkLog extends Component
 
     public string $clientSearch = '';
 
-    /** @var array<int, array{attended: bool, override: string, members: array<int, array{attended: bool, override: string}>}> keyed by client id */
+    /** @var array<int, array{attendance: string, override: string, client_note: string, members: array<int, array{attended: bool, override: string}>}> keyed by client id */
     public array $attendees = [];
+
+    /** Untick to keep every session in this batch off the gym's usage report. */
+    public bool $gymBillable = true;
 
     public bool $sendReceipts = false;
 
@@ -166,7 +169,9 @@ class BulkLog extends Component
             'dates' => ['required', 'array', 'min:1', 'max:'.LogSessionsInBulk::MAX_SESSIONS],
             'dates.*' => ['date'],
             'attendees' => ['required', 'array', 'min:1'],
-            'attendees.*.attended' => ['boolean'],
+            // One set of attendees stamped onto every date, so a per-session late cancel has
+            // no meaning here; log those one at a time.
+            'attendees.*.attendance' => [Rule::in(['attended'])],
             'attendees.*.override' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'attendees.*.members' => ['array', 'max:'.Client::MAX_MEMBERS],
             'attendees.*.members.*.attended' => ['boolean'],
@@ -212,6 +217,7 @@ class BulkLog extends Component
                 'user_id' => auth()->id(),
                 'service_id' => (int) $this->service_id,
                 'gym_id' => $this->gym_id !== '' ? (int) $this->gym_id : null,
+                'gym_billable' => $this->gymBillable,
                 'time' => $this->time,
                 'duration_minutes' => (int) $this->duration_minutes,
                 'notes' => $this->notes ?: null,

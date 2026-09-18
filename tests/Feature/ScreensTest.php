@@ -208,7 +208,7 @@ it('logs a partner session and charges both wallets, then reopens it from the se
 
     Livewire::test(Sessions\Show::class, ['trainingSession' => $session])
         ->call('reopen')
-        ->set("attendees.{$b->id}.attended", false)
+        ->set("attendees.{$b->id}.attendance", 'no_show')
         ->call('complete')
         ->assertHasNoErrors();
 

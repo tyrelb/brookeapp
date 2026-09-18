@@ -53,11 +53,12 @@ class Ics
         $session->loadMissing(['service', 'trainer', 'attendees.client']);
         $trainer = $session->trainer;
         $summary = "{$session->service->name} with {$trainer->displayName()}";
+        $names = $session->peopleNames();
 
         $description = collect([
             $summary,
             $session->starts_at->format('l, F j, Y \a\t g:i a').' ('.$session->duration_minutes.' min)',
-            $session->headcount() > 1 ? 'Attending: '.implode(', ', $session->peopleNames()) : null,
+            count($names) > 1 ? 'Attending: '.implode(', ', $names) : null,
             '',
             'To change or cancel this session please contact '.$trainer->displayName().' directly.',
             $trainer->booking_instructions,

@@ -127,7 +127,7 @@
                                 <span class="inline-flex size-5 items-center justify-center rounded-full text-xs {{ $key === $today ? 'bg-[var(--color-accent)] font-semibold text-white' : ($day->month !== $anchor->month ? 'text-zinc-400' : 'text-zinc-600 dark:text-zinc-300') }}">{{ $day->day }}</span>
                                 @foreach ($sessionsByDay->get($key, collect()) as $session)
                                     @php($status = $session->status->value)
-                                    @php($missed = $status === 'completed' && ! $session->myAttendance->attended)
+                                    @php($missed = $status === 'completed' && $session->myAttendance->attendance() !== \App\Enums\Attendance::Attended)
                                     <div class="mt-1 truncate rounded px-1 py-0.5 text-xs {{ $missed ? 'bg-zinc-100 text-zinc-500 line-through dark:bg-zinc-700' : ($status === 'completed' ? 'bg-green-50 text-green-800 dark:bg-green-900/40 dark:text-green-200' : ($status === 'cancelled' ? 'bg-zinc-100 text-zinc-500 line-through dark:bg-zinc-700' : 'bg-[var(--color-accent)]/10 text-[var(--color-accent-content)] dark:text-zinc-100')) }}" title="{{ $session->service->name }}">
                                         <span class="font-medium">{{ $session->starts_at->format('g:i') }}</span> {{ $session->service->name }}
                                     </div>
@@ -159,7 +159,8 @@
                         <div class="flex items-center justify-between gap-3 border-t border-zinc-100 px-4 py-3 text-sm first:border-t-0 dark:border-zinc-700">
                             <div>
                                 <div class="font-medium">{{ $session->starts_at->format('l, F j') }} · {{ $session->starts_at->format('g:i a') }}</div>
-                                <div class="text-zinc-500">{{ $session->service->name }} · {{ $session->duration_minutes }} min @if ($session->attendees->count() > 1) · with {{ $session->attendees->pluck('client')->reject(fn ($c) => $c->is($client))->pluck('first_name')->join(', ') }}@endif @if ($session->series && $loop->first) · {{ strtolower($session->series->describe()) }}@endif</div>
+                                @php($others = $session->attendees->reject(fn ($a) => $a->client_id === $client->id || $a->isLateCancel()))
+                                <div class="text-zinc-500">{{ $session->service->name }} · {{ $session->duration_minutes }} min @if ($others->isNotEmpty()) · with {{ $others->pluck('client.first_name')->join(', ') }}@endif @if ($session->series && $loop->first) · {{ strtolower($session->series->describe()) }}@endif</div>
                             </div>
                             <flux:badge size="sm" color="blue">Booked</flux:badge>
                         </div>
@@ -234,9 +235,15 @@
                                 @php($session = $attendance->trainingSession)
                                 <tr class="border-t border-zinc-100 dark:border-zinc-700">
                                     <td class="whitespace-nowrap px-4 py-2">{{ $session->starts_at->format('D M j, Y') }}</td>
-                                    <td class="px-4 py-2">{{ $session->service->name }} <span class="text-zinc-500">· {{ \App\Models\Plan::headcountLabel($session->headcount()) }}</span></td>
                                     <td class="px-4 py-2">
-                                        @if (! $attendance->attended && $session->isCompleted()) <flux:badge size="sm" color="zinc">Missed</flux:badge>
+                                        {{ $session->service->name }} <span class="text-zinc-500">· {{ \App\Models\Plan::headcountLabel($session->headcount()) }}</span>
+                                        {{-- Only once completed: until then it is the trainer's draft, not a message. --}}
+                                        @if ($session->isCompleted() && $attendance->client_note)
+                                            <div class="text-xs text-zinc-500">{{ $attendance->client_note }}</div>
+                                        @endif
+                                    </td>
+                                    <td class="px-4 py-2">
+                                        @if ($session->isCompleted() && $attendance->attendance() !== \App\Enums\Attendance::Attended) <flux:badge size="sm" :color="$attendance->attendance()->color()">{{ $attendance->attendance()->label() }}</flux:badge>
                                         @else <flux:badge size="sm" :color="$session->status->color()">{{ $session->status->label() }}</flux:badge> @endif
                                     </td>
                                     <td class="px-4 py-2 text-right tabular-nums">

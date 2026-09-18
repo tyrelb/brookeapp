@@ -2,13 +2,14 @@
 
 namespace App\Livewire\Sessions\Concerns;
 
+use App\Enums\Attendance;
 use App\Models\Client;
 
 /**
  * Turning "which family members are ticked" in a form into something the models can
  * store, shared by every screen that picks attendees.
  *
- * @property array<int, array{attended: bool, override: string, members: array<int, array{attended: bool, override: string}>}> $attendees keyed by client id
+ * @property array<int, array{attendance: string, override: string, client_note: string, members: array<int, array{attended: bool, override: string}>}> $attendees keyed by client id
  */
 trait SelectsMembers
 {
@@ -33,17 +34,41 @@ trait SelectsMembers
     }
 
     /**
-     * Member ticks decide whether a family is on the session at all.
+     * Whether this client is on the bill — the `attended` column. Member ticks decide it
+     * for a family; for everyone else, anything but a no-show is charged, late cancels
+     * included.
      *
      * @param  array<string, mixed>  $state
      */
-    protected function stateAttends(Client $client, array $state): bool
+    protected function stateAttends(?Client $client, array $state): bool
     {
-        if (! $client->isOnFamilyPlan()) {
-            return (bool) ($state['attended'] ?? false);
+        if (! $client?->isOnFamilyPlan()) {
+            return Attendance::fromInput($state['attendance'] ?? null) !== Attendance::NoShow;
         }
 
         return collect($state['members'] ?? [])->contains(fn ($member) => (bool) ($member['attended'] ?? false));
+    }
+
+    /**
+     * Whether this client is charged but was not in the room — the `late_cancelled` column.
+     *
+     * @param  array<string, mixed>  $state
+     */
+    protected function stateLateCancelled(array $state): bool
+    {
+        return Attendance::fromInput($state['attendance'] ?? null) === Attendance::LateCancel;
+    }
+
+    /**
+     * The client-visible reason, or null when the trainer left it blank.
+     *
+     * @param  array<string, mixed>  $state
+     */
+    protected function stateClientNote(array $state): ?string
+    {
+        $note = trim((string) ($state['client_note'] ?? ''));
+
+        return $note === '' ? null : $note;
     }
 
     /**

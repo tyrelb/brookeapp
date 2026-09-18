@@ -13,10 +13,11 @@ use Illuminate\Database\Eloquent\Collection;
  * ticked. The default has to fail closed: pre-ticking everyone would charge for people
  * who never showed up, while forgetting to tick anyone is caught before the charge.
  *
- * @property array<int, array{attended: bool, override: string, members: array<int, array{attended: bool, override: string}>}> $attendees keyed by client id
+ * @property array<int, array{attendance: string, override: string, client_note: string, members: array<int, array{attended: bool, override: string}>}> $attendees keyed by client id
  * @property string $clientSearch
  * @property string $gym_id
  * @property bool $gymChosen
+ * @property bool $gymBillable
  */
 trait PicksAttendees
 {
@@ -30,9 +31,12 @@ trait PicksAttendees
             return;
         }
 
+        // A family's own attendance comes from its member ticks; this only says whether
+        // the ticked members came or cancelled late.
         $this->attendees[$clientId] = [
-            'attended' => ! $client->isOnFamilyPlan(),
+            'attendance' => 'attended',
             'override' => '',
+            'client_note' => '',
             'members' => $this->blankMemberState($client),
         ];
         $this->clientSearch = '';
@@ -51,6 +55,9 @@ trait PicksAttendees
     public function updatedGymId(): void
     {
         $this->gymChosen = true;
+        // The switch lives inside the gym's charge panel, which a different gym may not
+        // show at all; an untick made for the old gym must not ride along unseen.
+        $this->gymBillable = true;
     }
 
     /** @return Collection<int, Client> */

@@ -33,7 +33,11 @@ The table has sessions, session revenue, monthly fees, revenue, GST charged, mon
 - **The cards**: sessions counted, people trained, usage charges (with the monthly rate underneath) and the total owed including GST. Family members count individually here too, because the gym charges by how many bodies were in the room.
 - **Summary by group size** shows how many sessions of each size, the hours logged and the hourly rate for each, using the gym's rate card from Settings.
 - **Amount owed** adds the usage charges, monthly rate and GST.
-- **Detail** lists every completed session at that gym with its date, time, group size, length, hourly rate and charge. Sessions are billed pro-rata by length, so two sessions of the same size can cost different amounts. **Untick** a row to exclude a session the gym should not charge for; the totals update immediately.
+- **Detail** lists every completed session at that gym that had someone in the room, with its date, time, group size, length, hourly rate and charge. Sessions are billed pro-rata by length, so two sessions of the same size can cost different amounts. **Untick** a row to exclude a session the gym should not charge for; the totals update immediately.
+
+Group size counts the people who were **in the room**. A client marked **Missed / late cancel** pays you, but the gym doesn't charge for them. A session nobody turned up to isn't listed at all, because the gym has nothing to charge for. Sessions logged with **Charge *gym* for this session** unticked arrive already unticked here.
+
+> **Note:** Months you already finalized keep their snapshot. Reopening and re-finalizing an old month recalculates it with these rules, so an old all-no-show session that was billed at the one-person rate drops out.
 
 If some completed sessions have no gym, a notice offers to assign them to the selected gym in one click.
 

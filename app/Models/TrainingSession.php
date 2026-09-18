@@ -108,8 +108,9 @@ class TrainingSession extends Model
     }
 
     /**
-     * People who actually attended, not attendee rows: a family client contributes
-     * the members who were there. Drives the per-person rate tier.
+     * People on the bill, not attendee rows: a family client contributes the members
+     * who were there. Drives the per-person rate tier, so a late cancel counts — the
+     * group is priced as it was booked.
      */
     public function headcount(): int
     {
@@ -121,7 +122,20 @@ class TrainingSession extends Model
     }
 
     /**
-     * Everyone who attended, by name, with families expanded into their members.
+     * People who were actually in the room: the headcount less anyone who cancelled late.
+     * This is what the gym charges for, and what counts as someone trained.
+     */
+    public function roomHeadcount(): int
+    {
+        if ($this->isCover()) {
+            return $this->coverPeople();
+        }
+
+        return (int) $this->attendees->sum(fn (SessionAttendee $attendee) => $attendee->roomCount());
+    }
+
+    /**
+     * Everyone who was in the room, by name, with families expanded into their members.
      *
      * @return list<string>
      */
@@ -132,7 +146,7 @@ class TrainingSession extends Model
         }
 
         return $this->attendees
-            ->flatMap(fn (SessionAttendee $attendee) => $attendee->attended ? $attendee->peopleNames() : [])
+            ->flatMap(fn (SessionAttendee $attendee) => $attendee->roomCount() > 0 ? $attendee->peopleNames() : [])
             ->values()
             ->all();
     }

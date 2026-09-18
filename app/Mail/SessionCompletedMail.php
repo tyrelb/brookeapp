@@ -14,6 +14,8 @@ use Illuminate\Queue\SerializesModels;
 
 /**
  * Receipt after a completed session: what was charged and the client's remaining balance.
+ * A late cancel gets the same receipt under a different heading, carrying the trainer's
+ * reason — the one thing that makes a charge for a session they missed make sense.
  */
 class SessionCompletedMail extends Mailable implements ShouldQueue
 {
@@ -28,7 +30,8 @@ class SessionCompletedMail extends Mailable implements ShouldQueue
         return new Envelope(
             from: new Address(config('mail.from.address'), $trainer->displayName()),
             replyTo: [new Address($trainer->email, $trainer->displayName())],
-            subject: "Thanks for training today — {$this->attendee->trainingSession->service->name}",
+            subject: ($this->attendee->isLateCancel() ? 'Late cancellation' : 'Thanks for training today')
+                ." — {$this->attendee->trainingSession->service->name}",
         );
     }
 
@@ -49,6 +52,8 @@ class SessionCompletedMail extends Mailable implements ShouldQueue
                 'rateTier' => Plan::rateTierLabel($session->headcount()),
                 'members' => $this->attendee->members->where('attended', true),
                 'isMonthly' => $client->isOnMonthlyPlan(),
+                'lateCancel' => $this->attendee->isLateCancel(),
+                'note' => $this->attendee->client_note,
             ],
         );
     }

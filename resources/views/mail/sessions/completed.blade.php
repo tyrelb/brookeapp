@@ -1,17 +1,33 @@
 <x-mail::message>
+@if ($lateCancel)
+# Missed / late-cancelled session
+
+Hi {{ $client->isOnFamilyPlan() ? 'there' : $client->first_name }},
+
+Your session with {{ $trainer->displayName() }} was missed or cancelled late, so it has been charged as booked.
+@else
 # Thanks for training today
 
 Hi {{ $client->isOnFamilyPlan() ? 'there' : $client->first_name }},
 
 Here's a summary of your session with {{ $trainer->displayName() }}.
+@endif
 
 <x-mail::panel>
 **{{ $session->service->name }}** ({{ $tier }})<br>
 @if ($members->isNotEmpty())
-Attending: {{ $members->pluck('member_name')->join(', ') }}<br>
+{{ $lateCancel ? 'Booked' : 'Attending' }}: {{ $members->pluck('member_name')->join(', ') }}<br>
 @endif
 {{ $session->starts_at->format('l, F j, Y') }} at {{ $session->starts_at->format('g:i a') }}
+@if ($lateCancel && $note)
+<br>**Reason:** {{ $note }}
+@endif
 </x-mail::panel>
+
+@if (! $lateCancel && $note)
+**Note from {{ $trainer->displayName() }}:** {{ $note }}
+
+@endif
 
 @if ((float) $attendee->total > 0)
 <x-mail::table>
@@ -22,7 +38,7 @@ Attending: {{ $members->pluck('member_name')->join(', ') }}<br>
 | {{ $member->member_name }} ({{ $rateTier }} rate) | {{ money($member->subtotal) }} |
 @endforeach
 @else
-| Session ({{ $rateTier }} rate) | {{ money($attendee->subtotal) }} |
+| {{ $lateCancel ? 'Late cancellation' : 'Session' }} ({{ $rateTier }} rate) | {{ money($attendee->subtotal) }} |
 @endif
 @if ((float) $attendee->gst_amount > 0)
 | GST | {{ money($attendee->gst_amount) }} |

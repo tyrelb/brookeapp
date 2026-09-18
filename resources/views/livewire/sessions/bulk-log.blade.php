@@ -233,9 +233,18 @@
                             </div>
                             <div class="mt-2 flex items-center justify-between border-t border-amber-200 pt-2 font-medium text-amber-900 dark:border-amber-800/60 dark:text-amber-200">
                                 <span>× {{ count($dates) }} {{ Str::plural('session', count($dates)) }}</span>
-                                <span class="tabular-nums">{{ money($gymGrandTotal) }}</span>
+                                <span class="tabular-nums {{ $gymBillable ? '' : 'line-through opacity-60' }}">{{ money($gymGrandTotal) }}</span>
                             </div>
-                            <p class="mt-1 text-xs text-amber-800/80 dark:text-amber-200/70">{{ money($gymCharge['rate']) }}/hour × {{ $gymCharge['minutes'] }} min · before GST · not billed to clients</p>
+                            <p class="mt-1 text-xs text-amber-800/80 dark:text-amber-200/70">
+                                @if ($gymBillable)
+                                    {{ money($gymCharge['rate']) }}/hour × {{ $gymCharge['minutes'] }} min · before GST · not billed to clients
+                                @else
+                                    Not charged — these sessions are left off {{ $gymCharge['name'] }}'s usage report
+                                @endif
+                            </p>
+                            <div class="mt-2 border-t border-amber-200/70 pt-2 dark:border-amber-800/40">
+                                <flux:checkbox wire:model.live="gymBillable" label="Charge {{ $gymCharge['name'] }} for these sessions" />
+                            </div>
                         </div>
                     @endif
                 @endif

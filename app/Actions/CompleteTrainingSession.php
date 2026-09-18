@@ -20,6 +20,9 @@ use Illuminate\Support\Str;
  * Marks a session complete and charges every attendee according to their plan.
  * Wallet (pay-as-you-go) clients get a debit on their Fitness Wallet ledger;
  * monthly clients are recorded at $0 (included in their fee).
+ *
+ * A late cancel is charged exactly as if they had come — same tier, same price — and
+ * must say why, because the reason is what the client reads on their receipt.
  */
 class CompleteTrainingSession
 {
@@ -42,6 +45,16 @@ class CompleteTrainingSession
             foreach ($session->attendees as $attendee) {
                 if ($attendee->attended && $attendee->client?->isOnFamilyPlan() && $attendee->members->where('attended', true)->isEmpty()) {
                     throw new BillingException("Tick which {$attendee->client->full_name} members attended before completing this session.");
+                }
+
+                // syncMembers() clears `attended` when nobody is ticked, which would quietly
+                // turn a family's late cancel into a free no-show.
+                if ($attendee->late_cancelled && $attendee->client?->isOnFamilyPlan() && $attendee->members->where('attended', true)->isEmpty()) {
+                    throw new BillingException("Tick which {$attendee->client->full_name} members were booked before charging the late cancel.");
+                }
+
+                if ($attendee->isLateCancel() && blank($attendee->client_note)) {
+                    throw new BillingException("Add a reason for {$attendee->client?->full_name}'s late cancel. They'll see it on their receipt.");
                 }
 
                 $lines[$attendee->client_id] = AttendeeLine::fromAttendee($attendee);
@@ -123,19 +136,26 @@ class CompleteTrainingSession
 
     /**
      * "Personal Training (Triple)" for one person; a family's charge names who it covers,
-     * because it is one ledger line standing in for several people.
+     * because it is one ledger line standing in for several people. The trainer's reason
+     * goes on the end, since this line is what the client reads on their wallet page.
      */
     private function describe(TrainingSession $session, SessionAttendee $attendee, string $tier): string
     {
         $line = "{$session->service->name} ({$tier})";
 
-        if (! $attendee->client?->isOnFamilyPlan()) {
-            return $line;
+        if ($attendee->client?->isOnFamilyPlan()) {
+            $line .= ' — '.implode(', ', $attendee->peopleNames());
         }
 
-        $names = implode(', ', $attendee->peopleNames());
+        $note = trim((string) $attendee->client_note);
 
-        return Str::limit("{$line} — {$names}", 250);
+        if ($attendee->isLateCancel()) {
+            $line .= $note === '' ? ' — late cancel' : " — late cancel: {$note}";
+        } elseif ($note !== '') {
+            $line .= " — {$note}";
+        }
+
+        return Str::limit($line, 250);
     }
 
     private function charge(TrainingSession $session, SessionAttendee $attendee, float $subtotal, float $gst, float $total, string $tier): WalletTransaction

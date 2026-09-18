@@ -53,8 +53,11 @@ class Log extends Component
 
     public string $clientSearch = '';
 
-    /** @var array<int, array{attended: bool, override: string, members: array<int, array{attended: bool, override: string}>}> keyed by client id */
+    /** @var array<int, array{attendance: string, override: string, client_note: string, members: array<int, array{attended: bool, override: string}>}> keyed by client id */
     public array $attendees = [];
+
+    /** Untick to keep this session off the gym's usage report. Logging only; a booking decides later. */
+    public bool $gymBillable = true;
 
     /** Covering the gym's own clients: the gym pays her, and no client is charged. */
     public bool $cover = false;
@@ -251,7 +254,8 @@ class Log extends Component
             'coverNames' => [Rule::requiredIf($this->cover), 'array'],
             'coverNames.*' => ['nullable', 'string', 'max:'.CoverNames::MAX_LENGTH],
             'attendees' => [Rule::requiredIf(! $this->cover), 'array', $this->cover ? 'max:0' : 'min:1'],
-            'attendees.*.attended' => ['boolean'],
+            'attendees.*.attendance' => [Rule::in(['attended', 'late_cancel', 'no_show'])],
+            'attendees.*.client_note' => ['nullable', 'string', 'max:150'],
             'attendees.*.override' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'attendees.*.members' => ['array', 'max:'.Client::MAX_MEMBERS],
             'attendees.*.members.*.attended' => ['boolean'],
@@ -268,6 +272,7 @@ class Log extends Component
             'gym_id.required' => 'Pick the gym this session is at so it shows on the gym usage report.',
             'attendees.required' => 'Add at least one client.',
             'attendees.min' => 'Add at least one client.',
+            'attendees.*.client_note.max' => 'Keep the reason under 150 characters.',
         ]);
 
         if ($this->cover) {
@@ -288,7 +293,9 @@ class Log extends Component
             $client = $clients[$clientId];
 
             if ($client->isOnFamilyPlan() && ! $this->stateAttends($client, $state)) {
-                $this->addError('attendees', "Tick which {$client->full_name} members are attending.");
+                $this->addError('attendees', $this->stateLateCancelled($state)
+                    ? "Tick which {$client->full_name} members were booked."
+                    : "Tick which {$client->full_name} members are attending.");
 
                 return;
             }
@@ -305,6 +312,7 @@ class Log extends Component
                 $session = TrainingSession::create([
                     'service_id' => (int) $this->service_id,
                     'gym_id' => $this->gym_id !== '' ? (int) $this->gym_id : null,
+                    'gym_billable' => $this->isBooking() || $this->gymBillable,
                     'starts_at' => "{$this->date} {$this->time}:00",
                     'duration_minutes' => (int) $this->duration_minutes,
                     'status' => SessionStatus::Scheduled,
@@ -317,6 +325,8 @@ class Log extends Component
                     $attendee = $session->attendees()->create([
                         'client_id' => $clientId,
                         'attended' => $this->stateAttends($client, $state),
+                        'late_cancelled' => ! $this->isBooking() && $this->stateLateCancelled($state),
+                        'client_note' => $this->isBooking() ? null : $this->stateClientNote($state),
                         'price_override' => ! $client->isOnFamilyPlan() && ($state['override'] ?? '') !== ''
                             ? round((float) $state['override'], 2)
                             : null,

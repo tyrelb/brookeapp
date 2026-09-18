@@ -62,7 +62,6 @@
                         <thead class="bg-zinc-50 text-xs text-zinc-500 dark:bg-zinc-800">
                             <tr>
                                 <th class="px-3 py-2 text-left font-normal">Client</th>
-                                <th class="px-3 py-2 text-left font-normal">Attended</th>
                                 <th class="px-3 py-2 text-left font-normal">Override</th>
                                 <th class="px-3 py-2 text-right font-normal">Charge</th>
                                 <th></th>
@@ -78,12 +77,11 @@
                                         <div class="text-xs text-zinc-500">
                                             {{ $row['client']->plan?->name ?? 'No plan' }}@if ($attendee?->invite_sent_at) · invited {{ $attendee->invite_sent_at->format('M j') }}@elseif (! $row['client']->email) · no email @endif
                                             @if ($isFamily)
-                                                · {{ $row['people'] }} of {{ count($attendees[$clientId]['members'] ?? []) }} attending
+                                                · {{ $row['people'] }} of {{ count($attendees[$clientId]['members'] ?? []) }} {{ $row['late_cancel'] ? 'booked' : 'attending' }}
                                                 <button type="button" class="ml-1 underline decoration-dotted underline-offset-2" wire:click="toggleAllMembers({{ $clientId }}, {{ $row['people'] ? 'false' : 'true' }})">{{ $row['people'] ? 'clear' : 'select all' }}</button>
                                             @endif
                                         </div>
                                     </td>
-                                    <td class="px-3 py-2">@unless ($isFamily)<flux:checkbox wire:model.live="attendees.{{ $clientId }}.attended" />@endunless</td>
                                     <td class="px-3 py-2">@unless ($isFamily)<flux:input wire:model.live.debounce.400ms="attendees.{{ $clientId }}.override" type="number" step="0.01" min="0" placeholder="Plan rate" class="w-28" />@endunless</td>
                                     <td class="px-3 py-2 text-right tabular-nums">
                                         @if (! $row['attended']) <span class="text-zinc-400">No-show</span>
@@ -91,16 +89,17 @@
                                         @elseif ($row['total'] == 0) <span class="text-zinc-500">Included</span>
                                         @else {{ money($row['total']) }} <div class="text-xs text-zinc-500">{{ money($row['subtotal']) }} + {{ money($row['gst']) }} GST</div>
                                         @endif
+                                        @if ($row['late_cancel']) <div class="text-xs text-amber-700 dark:text-amber-400">Late cancel</div> @endif
                                     </td>
                                     <td class="px-3 py-2 text-right"><flux:button size="xs" variant="ghost" icon="x-mark" wire:click="removeClient({{ $clientId }})" /></td>
                                 </tr>
+                                @include('livewire.sessions.partials.attendee-controls', ['clientId' => $clientId, 'client' => $row['client'], 'state' => $attendees[$clientId] ?? [], 'colspan' => 4])
                                 @if ($isFamily)
                                     @foreach ($attendees[$clientId]['members'] ?? [] as $memberId => $member)
                                         @php($charge = collect($row['members'])->firstWhere('id', (int) $memberId))
                                         @php($memberName = $row['client']->members->firstWhere('id', (int) $memberId)?->name ?? 'Member')
                                         <tr class="bg-zinc-50/60 text-xs dark:bg-zinc-800/40" wire:key="att-{{ $clientId }}-m-{{ $memberId }}">
                                             <td class="py-1.5 pl-8 pr-3"><flux:checkbox wire:model.live="attendees.{{ $clientId }}.members.{{ $memberId }}.attended" :label="$memberName" /></td>
-                                            <td></td>
                                             <td class="px-3 py-1.5"><flux:input wire:model.live.debounce.400ms="attendees.{{ $clientId }}.members.{{ $memberId }}.override" type="number" step="0.01" min="0" placeholder="Plan rate" class="w-28" size="sm" /></td>
                                             <td class="px-3 py-1.5 text-right tabular-nums text-zinc-500">{{ $charge ? money($charge['subtotal']) : '—' }}</td>
                                             <td></td>
@@ -108,7 +107,7 @@
                                     @endforeach
                                 @endif
                             @empty
-                                <tr><td colspan="5" class="px-3 py-4 text-sm text-zinc-500">No clients added yet.</td></tr>
+                                <tr><td colspan="4" class="px-3 py-4 text-sm text-zinc-500">No clients added yet.</td></tr>
                             @endforelse
                         </tbody>
                     </table>
@@ -195,7 +194,7 @@
                 <flux:table.columns>
                     <flux:table.column>Client</flux:table.column>
                     <flux:table.column>Plan</flux:table.column>
-                    <flux:table.column>Attended</flux:table.column>
+                    <flux:table.column>Attendance</flux:table.column>
                     <flux:table.column align="end">Before GST</flux:table.column>
                     <flux:table.column align="end">GST</flux:table.column>
                     <flux:table.column align="end">Charged</flux:table.column>
@@ -204,9 +203,14 @@
                 <flux:table.rows>
                     @foreach ($session->attendees as $attendee)
                         <flux:table.row :key="$attendee->id">
-                            <flux:table.cell variant="strong"><flux:link :href="route('clients.show', $attendee->client)" wire:navigate>{{ $attendee->client->full_name }}</flux:link></flux:table.cell>
+                            <flux:table.cell variant="strong">
+                                <flux:link :href="route('clients.show', $attendee->client)" wire:navigate>{{ $attendee->client->full_name }}</flux:link>
+                                @if ($attendee->client_note)
+                                    <div class="text-xs font-normal text-zinc-500" title="Shown to the client">“{{ $attendee->client_note }}”</div>
+                                @endif
+                            </flux:table.cell>
                             <flux:table.cell>{{ $attendee->client->plan?->name ?? 'No plan' }}</flux:table.cell>
-                            <flux:table.cell>{{ $attendee->attended ? 'Yes' : 'No-show' }}</flux:table.cell>
+                            <flux:table.cell><flux:badge size="sm" :color="$attendee->attendance()->color()">{{ $attendee->attendance()->label() }}</flux:badge></flux:table.cell>
                             <flux:table.cell align="end">{{ $session->isCompleted() && $attendee->attended ? money($attendee->subtotal) : '' }}</flux:table.cell>
                             <flux:table.cell align="end">{{ $session->isCompleted() && $attendee->attended ? money($attendee->gst_amount) : '' }}</flux:table.cell>
                             <flux:table.cell align="end">
@@ -220,7 +224,7 @@
                             <flux:table.row :key="'m-'.$member->id">
                                 <flux:table.cell class="pl-8 text-xs text-zinc-500">{{ $member->member_name }}</flux:table.cell>
                                 <flux:table.cell></flux:table.cell>
-                                <flux:table.cell class="text-xs text-zinc-500">Yes</flux:table.cell>
+                                <flux:table.cell class="text-xs text-zinc-500">{{ $attendee->attendance()->label() }}</flux:table.cell>
                                 <flux:table.cell align="end" class="text-xs text-zinc-500">{{ $session->isCompleted() ? money($member->subtotal) : '' }}</flux:table.cell>
                                 <flux:table.cell></flux:table.cell>
                                 <flux:table.cell></flux:table.cell>
@@ -231,7 +235,8 @@
                 </flux:table.rows>
             </flux:table>
             <div class="mt-3 text-sm text-zinc-500">
-                {{ \App\Models\Plan::headcountLabel($session->headcount()) }} session · {{ $session->headcount() }} attended
+                {{ \App\Models\Plan::headcountLabel($session->headcount()) }} session · {{ $session->roomHeadcount() }} attended
+                @if ($lateCancels = $session->attendees->filter->isLateCancel()->count()) · {{ $lateCancels }} late {{ Str::plural('cancel', $lateCancels) }} @endif
                 @if ($session->isCompleted()) · total charged {{ money($session->attendees->sum('total')) }} · completed {{ $session->completed_at?->format('M j, Y g:i a') }} @endif
             </div>
             @if ($session->notes)
@@ -252,13 +257,17 @@
                             <flux:select.option value="{{ $gym->id }}">{{ $gym->name }}{{ $gym->active ? '' : ' (inactive)' }}</flux:select.option>
                         @endforeach
                     </flux:select>
-                    @if ($gymCharge && $gymCharge['charges'] && $gymCharge['amount'] !== null)
+                    @if ($emptyRoom = $session->isCompleted() && ! $session->isCover() && $session->roomHeadcount() === 0)
+                        <p class="mt-2 text-xs text-zinc-500">Nobody was in the room, so {{ $session->gym?->name ?? 'the gym' }} doesn't charge for this session.</p>
+                    @elseif ($gymCharge && $gymCharge['charges'] && $gymCharge['amount'] !== null)
                         <p class="mt-2 text-xs {{ $session->gym_billable ? 'text-zinc-500' : 'text-zinc-400 line-through' }}">
                             Costs you {{ money($gymCharge['amount']) }} — {{ money($gymCharge['rate']) }}/hour × {{ $gymCharge['minutes'] }} min, before GST.{{ $session->gym_billable ? '' : ' Not counted.' }}
                         </p>
                     @endif
                 </div>
-                @if ($session->isCover())
+                @if ($emptyRoom)
+                    {{-- Nothing to switch off: the usage report already leaves an empty room out. --}}
+                @elseif ($session->isCover())
                     <flux:checkbox :checked="$session->gym_billable" wire:click="toggleGymBillable" label="Credited on the gym statement" description="Untick to leave this session off the gym's statement. It stops counting as revenue too." />
                 @else
                     <flux:checkbox :checked="$session->gym_billable" wire:click="toggleGymBillable" label="Counts toward gym usage" description="Untick if the gym shouldn't charge for this session." />

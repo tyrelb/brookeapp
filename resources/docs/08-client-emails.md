@@ -22,6 +22,8 @@ Sent when you complete a session with **Email attendees a receipt** ticked, or w
 
 For a monthly member the receipt confirms the session and shows any amount owing on their account instead of a wallet balance.
 
+For a **late cancel** the receipt is headed *Missed / late-cancelled session* and shows your reason. The charge is labelled as a late cancellation, and a family's receipt lists who was **booked** instead of who trained. If you left a note for someone who did train, it appears under the session details.
+
 ## Wallet link
 
 Sent when you click **Email link** on a client's page.

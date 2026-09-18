@@ -24,7 +24,7 @@ class LogSessionsInBulk
     public function __construct(private CompleteTrainingSession $complete) {}
 
     /**
-     * @param  array{user_id?:int, service_id:int, gym_id:?int, time:?string, duration_minutes:int, notes:?string}  $attributes
+     * @param  array{user_id?:int, service_id:int, gym_id:?int, gym_billable?:bool, time:?string, duration_minutes:int, notes:?string}  $attributes
      * @param  list<string>  $dates
      * @param  array<int, array{attended?: bool, price_override?: ?float, members?: array<int, array{attended: bool, price_override: ?float}>}>  $attendees  keyed by client id
      * @return list<TrainingSession>
@@ -47,6 +47,7 @@ class LogSessionsInBulk
                     'user_id' => $attributes['user_id'] ?? auth()->id(),
                     'service_id' => $attributes['service_id'],
                     'gym_id' => $attributes['gym_id'] ?? null,
+                    'gym_billable' => $attributes['gym_billable'] ?? true,
                     'starts_at' => "{$date} {$time}:00",
                     'duration_minutes' => $attributes['duration_minutes'],
                     'status' => SessionStatus::Scheduled,

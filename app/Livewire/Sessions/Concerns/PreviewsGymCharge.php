@@ -47,16 +47,19 @@ trait PreviewsGymCharge
      *
      * Headcount is summed from the priced rows rather than taken from $preview['people'],
      * which floors at one so a rate tier always exists: on an empty form that would quote
-     * the price of a session nobody is at.
+     * the price of a session nobody is at. Late cancels are left out — they pay the
+     * trainer, but they were never in the gym's room.
      *
-     * @param  array{rows: array<int, array{people: int}>}  $preview  from previewCharges()
+     * @param  array{rows: array<int, array{people: int, late_cancel: bool}>}  $preview  from previewCharges()
      * @return array{name: string, charges: bool, rate: ?float, minutes: ?int, people: int, amount: ?float}|null
      */
     protected function previewGymCharge(?Gym $gym, array $preview, string $minutes): ?array
     {
+        $inRoom = array_filter($preview['rows'], fn (array $row) => ! $row['late_cancel']);
+
         return $this->gymChargeFor(
             $gym,
-            (int) array_sum(array_column($preview['rows'], 'people')),
+            (int) array_sum(array_column($inRoom, 'people')),
             is_numeric($minutes) ? (int) $minutes : null,
         );
     }

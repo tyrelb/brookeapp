@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\Attendance;
 use Database\Factories\SessionAttendeeFactory;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -19,10 +20,15 @@ class SessionAttendee extends Model
      */
     protected $with = ['members'];
 
+    /** Set in memory too, so a row created without it still reads as a plain attendance. */
+    protected $attributes = ['late_cancelled' => false];
+
     protected $fillable = [
         'training_session_id',
         'client_id',
         'attended',
+        'late_cancelled',
+        'client_note',
         'price_override',
         'subtotal',
         'gst_amount',
@@ -36,6 +42,7 @@ class SessionAttendee extends Model
     {
         return [
             'attended' => 'boolean',
+            'late_cancelled' => 'boolean',
             'price_override' => 'decimal:2',
             'subtotal' => 'decimal:2',
             'gst_amount' => 'decimal:2',
@@ -62,8 +69,10 @@ class SessionAttendee extends Model
     }
 
     /**
-     * How many people this row puts in the room. A family contributes the members
-     * who were ticked; everyone else contributes themselves.
+     * How many people this row puts on the bill, which is what sets the rate tier. A family
+     * contributes the members who were ticked; everyone else contributes themselves. A late
+     * cancel still counts: they held their place, so everyone pays the rate of the group
+     * as it was booked.
      */
     public function peopleCount(): int
     {
@@ -74,6 +83,22 @@ class SessionAttendee extends Model
         return $this->client?->isOnFamilyPlan()
             ? $this->members->where('attended', true)->count()
             : 1;
+    }
+
+    /** How many people this row actually put in the room, which is what the gym charges for. */
+    public function roomCount(): int
+    {
+        return $this->isLateCancel() ? 0 : $this->peopleCount();
+    }
+
+    public function attendance(): Attendance
+    {
+        return Attendance::fromFlags((bool) $this->attended, (bool) $this->late_cancelled);
+    }
+
+    public function isLateCancel(): bool
+    {
+        return $this->attendance() === Attendance::LateCancel;
     }
 
     /** @return list<string> the people this row brought, by name */

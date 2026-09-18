@@ -10,6 +10,7 @@ use App\Actions\RescheduleFollowing;
 use App\Actions\SendSessionCancellations;
 use App\Actions\SendSessionInvites;
 use App\Actions\SendSessionReceipts;
+use App\Enums\Attendance;
 use App\Enums\SessionStatus;
 use App\Exceptions\BillingException;
 use App\Livewire\Sessions\Concerns\PreviewsCharges;
@@ -35,7 +36,7 @@ class Show extends Component
 
     public string $clientSearch = '';
 
-    /** @var array<int, array{attended: bool, override: string, members: array<int, array{attended: bool, override: string}>}> keyed by client id */
+    /** @var array<int, array{attendance: string, override: string, client_note: string, members: array<int, array{attended: bool, override: string}>}> keyed by client id */
     public array $attendees = [];
 
     public bool $sendReceipts = false;
@@ -69,11 +70,26 @@ class Show extends Component
 
         foreach ($this->trainingSession->attendees()->with('client.activeMembers', 'members')->get() as $attendee) {
             $this->attendees[$attendee->client_id] = [
-                'attended' => $attendee->attended,
+                'attendance' => $this->attendanceStateFor($attendee),
                 'override' => $attendee->price_override !== null ? number_format((float) $attendee->price_override, 2, '.', '') : '',
+                'client_note' => (string) $attendee->client_note,
                 'members' => $this->memberStateFor($attendee),
             ];
         }
+    }
+
+    /**
+     * A family's row is only "not attended" because nobody is ticked yet, which says nothing
+     * about whether they came; reading it through the attendance enum would turn a saved
+     * late cancel into a no-show the moment the page reloads.
+     */
+    private function attendanceStateFor(SessionAttendee $attendee): string
+    {
+        if ($attendee->client?->isOnFamilyPlan()) {
+            return $attendee->late_cancelled ? Attendance::LateCancel->value : Attendance::Attended->value;
+        }
+
+        return $attendee->attendance()->value;
     }
 
     /**
@@ -150,8 +166,9 @@ class Show extends Component
         });
 
         $this->attendees[$clientId] = [
-            'attended' => ! $client->isOnFamilyPlan(),
+            'attendance' => Attendance::Attended->value,
             'override' => '',
+            'client_note' => '',
             'members' => $client->activeMembers->mapWithKeys(fn ($m) => [$m->id => ['attended' => false, 'override' => '']])->all(),
         ];
         $this->clientSearch = '';
@@ -181,12 +198,15 @@ class Show extends Component
         }
 
         $this->validate([
-            'attendees.*.attended' => ['boolean'],
+            'attendees.*.attendance' => [Rule::in(['attended', 'late_cancel', 'no_show'])],
+            'attendees.*.client_note' => ['nullable', 'string', 'max:150'],
             'attendees.*.override' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'attendees.*.members' => ['array', 'max:'.Client::MAX_MEMBERS],
             'attendees.*.members.*.attended' => ['boolean'],
             'attendees.*.members.*.override' => ['nullable', 'numeric', 'min:0', 'max:100000'],
             'notes' => ['nullable', 'string', 'max:2000'],
+        ], [
+            'attendees.*.client_note.max' => 'Keep the reason under 150 characters.',
         ]);
 
         $rows = $this->trainingSession->attendees()->with('client.members')->get()->keyBy('client_id');
@@ -202,7 +222,11 @@ class Show extends Component
                 $isFamily = $attendee->client?->isOnFamilyPlan() ?? false;
 
                 $attendee->update([
-                    'attended' => $isFamily ? $attendee->attended : (bool) $state['attended'],
+                    'attended' => $isFamily ? $attendee->attended : $this->stateAttends($attendee->client, $state),
+                    // Kept for a family even before anyone is ticked, so the choice survives
+                    // a save; completing refuses a late cancel with nobody booked.
+                    'late_cancelled' => $this->stateLateCancelled($state),
+                    'client_note' => $this->stateClientNote($state),
                     'price_override' => ! $isFamily && ($state['override'] ?? '') !== ''
                         ? round((float) $state['override'], 2)
                         : null,
@@ -467,7 +491,7 @@ class Show extends Component
             'gyms' => Gym::query()->orderByDesc('active')->orderBy('name')->get(),
             'preview' => $session->isScheduled() ? $this->previewCharges($session->service, $selected) : null,
             // Real persisted values, so this is the charge itself rather than a preview of one.
-            'gymCharge' => $session->isCover() ? null : $this->gymChargeFor($session->gym, $session->headcount(), $session->duration_minutes),
+            'gymCharge' => $session->isCover() ? null : $this->gymChargeFor($session->gym, $session->roomHeadcount(), $session->duration_minutes),
             'following' => $following,
         ])->title($session->service->name.' — '.$session->starts_at->format('M j, Y'));
     }

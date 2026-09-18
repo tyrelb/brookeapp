@@ -109,7 +109,8 @@ class ReportBuilder
                 : (float) $session->attendees->where('attended', true)->sum('subtotal');
             $byService[$name] ??= ['sessions' => 0, 'attendances' => 0, 'revenue' => 0.0, 'tiers' => []];
             $byService[$name]['sessions']++;
-            $byService[$name]['attendances'] += $session->headcount();
+            // People trained, so late cancels are revenue but not attendances.
+            $byService[$name]['attendances'] += $session->roomHeadcount();
             $byService[$name]['revenue'] = round($byService[$name]['revenue'] + $earned, 2);
             $byService[$name]['tiers'][$tier] = ($byService[$name]['tiers'][$tier] ?? 0) + 1;
         }
@@ -131,7 +132,7 @@ class ReportBuilder
             'to' => $toDate,
             'sessions' => [
                 'count' => $sessions->count(),
-                'attendances' => (int) $sessions->sum(fn ($s) => $s->headcount()),
+                'attendances' => (int) $sessions->sum(fn ($s) => $s->roomHeadcount()),
                 'by_service' => $byService,
             ],
             'revenue' => [

@@ -13,6 +13,8 @@ use Carbon\CarbonImmutable;
  * Usage: what she owes the gym — one row per completed session, priced from the gym's
  * hourly rate card for that group size and pro-rated to how long the session ran, plus
  * the monthly rate, with the GYM's GST on top (which she reclaims as an input tax credit).
+ * Group size is who was in the room: a late cancel pays her but never used the space, and
+ * a session nobody turned up to is not on the gym's statement at all.
  *
  * Cover: what the gym owes her for training its own clients while the owner was away,
  * priced when the session was completed and carrying HER GST (which she remits).
@@ -54,7 +56,14 @@ class GymUsageReportBuilder
         $excluded = 0;
 
         foreach ($sessions as $session) {
-            $count = $session->headcount();
+            $count = $session->roomHeadcount();
+
+            // The rate card floors at one person, so an empty room would otherwise be billed
+            // as if someone had trained in it.
+            if ($count === 0) {
+                continue;
+            }
+
             $length = (int) $session->duration_minutes;
             $rate = $gym->rateFor($count);
             $amount = $gym->chargeFor($count, $length);
