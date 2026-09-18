@@ -89,8 +89,8 @@ queued, so a worker must be running.
 
 1. Create a site with PHP 8.5 and a MySQL 8 database.
 2. In `.env` set `APP_ENV=production`, `APP_DEBUG=false`, `APP_URL=https://brookeapp.com`, `APP_TIMEZONE=America/Vancouver`, and the `DB_CONNECTION=mysql` block (host, database, username, password).
-3. Configure a real mailer (`MAIL_MAILER=smtp` with your provider) so registration emails and password resets send. Email verification is required before the dashboard opens.
-4. Deploy script: `composer install --no-dev --optimize-autoloader && npm ci && npm run build && php artisan migrate --force && php artisan optimize`.
+3. Send mail through [Resend](https://resend.com): set `MAIL_MAILER=resend` and `RESEND_API_KEY`, and use a `MAIL_FROM_ADDRESS` on a domain verified in Resend, so registration emails and password resets send. Email verification is required before the dashboard opens.
+4. Deploy script: `composer install --no-dev --optimize-autoloader && npm ci && npm run build && php artisan migrate --force && php artisan optimize && php artisan queue:restart`. Restarting the queue worker makes queued emails pick up new code and `.env` changes.
 5. Enable Forge's scheduler (it runs `php artisan schedule:run` every minute) so monthly fees post.
 6. Optional but recommended: a queue worker (`php artisan queue:work`) — Phase 2 emails will use it.
 
