@@ -35,8 +35,8 @@ Click **Add plan** and leave **Pay-as-you-go (Fitness Wallet)** selected.
 
 1. Give the plan a **name** clients will recognise, such as "Standard pay-as-you-go".
 2. Fill in the **Session rates**. Each cell is the price *per person, before GST* when that many people train together: Single (1), Partner (2), Triple (3) or Quad (4). Partner rates are usually lower per person because two people share the hour.
-3. Leave a cell blank if you do not offer that size. A blank tier falls back to the next lower one, so a triple with no rate charges the partner rate. Groups of five or more pay the Quad rate for the same reason.
-4. Add a **Description** if you like, and click **Create plan**.
+. **Package size (optional)** is how many sessions this plan is sold in, for example 20. It is only used to suggest an amount when you request payment; leave it blank if the plan is not sold in blocks.
+5. Add a **Description** if you like, and click **Create plan**.
 
 ### A family plan
 

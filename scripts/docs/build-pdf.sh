@@ -27,13 +27,14 @@ mkdir -p "$BUILD"
 # Images are referenced as images/<name>.png relative to the build file.
 rm -rf "$BUILD/images"; cp -R public/images/docs "$BUILD/images"
 
-BUILD_ID="$(git rev-parse --short HEAD 2>/dev/null || echo dev)"   # make-pdf prints the date itself
+VERSION="$(cat VERSION)"
+RELEASED="$(php artisan tinker --execute="echo date('F j, Y', strtotime(config('app.released')));" 2>/dev/null | grep -v -E '^(Deprecated|Warning|Notice)' | tail -1)"
 
 generate() {
     "$P" generate --cover --strict --no-confidential \
         --page-size letter --margins 0.85in \
         --title "BrookeApp User Guide" \
-        --author "Brooke Fitness · build $BUILD_ID" \
+        --author "Version $VERSION · released $RELEASED" \
         "$1" "$2" >/dev/null
 }
 

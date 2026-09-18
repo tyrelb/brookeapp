@@ -27,6 +27,7 @@ echo <<<'CSS'
   p, li { font-size: 10.5pt; line-height: 1.5; }
   img { display: block; max-width: 100%; border: 1px solid #d8d8dc; border-radius: 6px; margin: 10pt 0 4pt; }
   img[alt$="on a phone"] { max-width: 2.6in; margin-left: auto; margin-right: auto; }
+  img[alt$="dialog"], img[alt$="form"], img[alt$="on the ledger"], img[alt$="ledger entry"] { max-width: 4.4in; margin-left: auto; margin-right: auto; }
   img + em { display: block; text-align: center; font-style: normal; font-size: 9pt; color: #6b6b73; margin: 0 0 14pt; }
   blockquote { margin: 12pt 0; padding: 8pt 12pt; border-left: 4px solid #6b4fc4; background: #f4f1fc; border-radius: 0 6px 6px 0; break-inside: avoid; }
   blockquote p { margin: 0; font-size: 10pt; }

@@ -34,6 +34,9 @@ A household that trains together can share one client record and one Fitness Wal
 2. List the members, one per line, up to ten. Use whatever you would say out loud: "Mom (Sarah)", "Dad", "Ellie".
 3. Save. The client page now shows a **Family members** card, and the household gets one email address, one wallet link and one balance.
 
+![The Barnes Family client page with its Family members card](/images/docs/client-family.png)
+*A family client: one wallet, the members listed on the page, and ledger lines that name who trained.*
+
 When you log or book a session you add "Barnes Family" once, then tick which members are coming. Nobody is ticked to begin with, so a session cannot quietly charge for someone who stayed home. The wallet is charged once for the session, for the people who were there, and the ledger line names them.
 
 Removing a member who has already trained keeps them on those past sessions; they simply stop being offered on new ones. Members you add later do not join bookings that already exist — open a repeating booking and use **Apply attendees to following** if you want them added.
@@ -77,7 +80,19 @@ For anything that is not a payment or a session, use **Adjustment**.
 
 ## Fixing a mistake
 
-Every ledger row that is not a session charge has a **Void** button. Voiding does not delete the row; it strikes it out and removes it from balances and reports, so the history stays honest. To undo a session charge, do not void it: open the session and use **Reopen** instead, which is covered in the Logging sessions chapter.
+Every ledger row that is not a session charge has **Edit** and **Void** beside it.
+
+- **Edit** changes the amount, date, method, reference or description in place. A **Reason for this change** is required, and the app recalculates GST the way the entry was created: payments and refunds are GST-inclusive, monthly fees are entered before GST, adjustments carry none. The row is marked as edited.
+- **Void** strikes the row out and removes it from balances and reports without deleting it, so the history stays honest.
+- The clock button at the end of every row, **Change history**, opens its history: who changed what, when, from which value to which, and why. Creations and voids are recorded too, so an entry can still be explained months later.
+
+![Editing a payment on the ledger](/images/docs/client-ledger-edit.png)
+*Edit keeps the row and writes the change to its history.*
+
+![The change history of a ledger entry](/images/docs/client-ledger-history.png)
+*Change history lists every creation, edit and void with who, when and why.*
+
+Session charges cannot be edited or voided here; they follow their session. To change one, open the session and use **Reopen**, which is covered in the Logging sessions chapter.
 
 ## Posting a monthly fee by hand
 

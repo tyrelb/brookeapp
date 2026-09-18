@@ -1,3 +1,7 @@
+| **Invoice** | A numbered payment request emailed to a client. Paid means the payments linked to it add up to its total. |
+| **Late cancel** | A client who cancelled too late or did not turn up but is still charged, at the rate for the group as booked, with a reason they can read. |
+| **No-show** | A booked client who did not come and is not charged. |
+| **Bulk log** | Logging up to 50 sessions with the same service and clients in one go. |
 ## Frequently asked questions
 
 **A client's balance is negative. What happened?**
@@ -13,7 +17,13 @@ Open the client, click **Edit**, choose the new plan and save. Sessions from the
 Open it and click **Reopen**. Every charge is voided, you fix the attendance, and **Complete & charge** posts it again. Do not void the session charges from the ledger; the app will point you to Reopen instead.
 
 **I recorded a payment wrongly.**
-Click **Void** on that row in the client's ledger, then record it again correctly. Voided rows stay visible, struck through.
+Click **Edit** on that row in the client's ledger, fix it and give a reason; the change is kept in the row's history. If it should never have existed, click **Void** instead. Voided rows stay visible, struck through.
+
+**How do I ask a client for money?**
+Open the client and click **Request payment**. The amount is suggested from their plan, the invoice is emailed, and it settles itself when you record the payment against it. **Invoices** in the sidebar lists everything outstanding.
+
+**I have a notebook full of past sessions to enter.**
+Use **Bulk log** (Log session, then Bulk log): one service and group of clients, up to 50 dates at once, with a warning if a date already has a session for someone.
 
 **Which GST figure do I remit?**
 The monthly and annual reports show both. *Accrual* is GST on what you charged; *cash* is the GST inside what you received. They differ because of prepaid wallet deposits. Your accountant will tell you which basis you file on.

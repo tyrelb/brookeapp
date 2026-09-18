@@ -24,10 +24,18 @@ ADMIN_EMAIL="admin@example.com"
 PASSWORD="password"
 THROWAWAY_EMAIL="sam.taylor@example.com"
 
-# Seeded records the walkthroughs use (ids follow DatabaseSeeder insertion order).
-AVA=1; BEN=2; FINN=6
-COMPLETED_SESSION=34   # Thu Sep 3, Ben + Chloe, completed
-SERIES_SESSION=37      # first session of Ava's Tue/Thu repeat
+# Seeded records the walkthroughs use. The seed is relative to today, so the session ids
+# and the dates the calendar opens on are looked up rather than hard-coded.
+AVA=1; BEN=2; FINN=6; FAMILY=9
+lookup() { php artisan tinker --execute="$1" 2>/dev/null | grep -v -E '^(Deprecated|Warning|Notice)' | tail -1; }
+TODAY=$(date +%F)
+COMPLETED_SESSION=$(lookup "echo App\\Models\\TrainingSession::withoutGlobalScopes()->where('status','completed')->has('attendees', 2)->whereNull('cover_names')->orderByDesc('starts_at')->value('id');")
+COMPLETED_DATE=$(lookup "echo App\\Models\\TrainingSession::withoutGlobalScopes()->find($COMPLETED_SESSION)->starts_at->toDateString();")
+SERIES_SESSION=$(lookup "echo App\\Models\\SessionSeries::withoutGlobalScopes()->first()->sessions()->where('status','scheduled')->orderBy('starts_at')->value('id');")
+UNTIL=$(date -v+3m +%F 2>/dev/null || date -d "+3 months" +%F)
+HANA=8
+OVERLAP_DATE=$(lookup "echo App\\Models\\TrainingSession::withoutGlobalScopes()->find($SERIES_SESSION)->starts_at->toDateString();")
+OVERLAP_TIME=$(lookup "echo App\\Models\\TrainingSession::withoutGlobalScopes()->find($SERIES_SESSION)->starts_at->format('H:i');")
 
 open_profile_menu() {
     js "document.querySelector('button[data-flux-profile]').click();'opened'" >/dev/null
@@ -135,10 +143,38 @@ chapter_clients() {
     shot_modal client-adjustment
     close_modal
 
+    artisan_eval "\$t = App\\Models\\WalletTransaction::withoutGlobalScopes()->where('client_id', $AVA)->where('type', 'payment')->latest('id')->first(); auth()->login(\$t->trainer); app(App\\Actions\\UpdateTransaction::class)->handle(\$t, 325, \$t->transacted_on, 'Client sent \$325, not \$300', \$t->description, \$t->payment_method, \$t->reference);"
+    go "/clients/$AVA"; tidy
+    click_css "button[wire\\:click^='editTransaction']"; sleep 0.5
+    shot_modal client-ledger-edit
+    close_modal
+    js "var e=document.querySelector('button[wire\\\\:click^=editTransaction]').closest('tr').querySelector('button[wire\\\\:click^=showHistory]');e.click();'ok'" >/dev/null; sleep 0.5
+    shot_modal client-ledger-history
+    close_modal
+
+    vp 1440x1100
+    go "/clients/$FAMILY"; tidy; shot client-family
+
     vp 1440x900
     go "/clients/$FINN"; tidy
     hl_init; hl_text "Post monthly fee"
     shot client-monthly-fee
+}
+
+# ─── Chapter 6: Requesting payment and invoices ────────────────────────────────
+chapter_invoices() {
+    vp 1440x1100
+    go "/clients/$HANA"; tidy
+    click_ref "Request payment"; sleep 0.6
+    shot_modal client-request-payment
+    close_modal
+    shot_clip client-payment-requests "$(rect_of_section 'Payment requests')"
+
+    vp 1440x900
+    go /invoices; tidy; shot invoices
+    click_text "Mark paid"; sleep 0.6
+    shot_modal invoice-mark-paid
+    close_modal
 }
 
 # ─── Chapter 6: Logging sessions ───────────────────────────────────────────────
@@ -155,6 +191,12 @@ chapter_sessions() {
     hl_init; hl_css "input[placeholder='Plan rate']"
     shot log-session-override
 
+    vp 1440x1500
+    go /sessions/log/bulk; tidy
+    click_text "Ava Nguyen"
+    for d in 2 9 16; do pick_bulk_date "$(date -v-${d}d +%F 2>/dev/null || date -d "-${d} days" +%F)"; done
+    tidy; shot bulk-log
+
     vp 1440x1100
     go "/sessions/$COMPLETED_SESSION"; tidy; shot session-completed
     accept_confirms; click_text "Reopen"; settle 15000 1; tidy
@@ -165,10 +207,10 @@ chapter_sessions() {
 # ─── Chapter 7: Calendar and booking ───────────────────────────────────────────
 chapter_calendar() {
     vp 1440x1100
-    go "/sessions/calendar?view=month&date=2026-09-04"; tidy; shot calendar-month
+    go "/sessions/calendar?view=month&date=$TODAY"; tidy; shot calendar-month
     vp 1440x900
-    go "/sessions/calendar?view=week&date=2026-09-04"; tidy; shot calendar-week
-    go "/sessions/calendar?view=day&date=2026-09-03"; tidy; shot calendar-day
+    go "/sessions/calendar?view=week&date=$TODAY"; tidy; shot calendar-week
+    go "/sessions/calendar?view=day&date=$COMPLETED_DATE"; tidy; shot calendar-day
 
     # A phone opens the calendar as a list; tapping an upcoming session slides up the sheet.
     vp 390x844
@@ -185,10 +227,15 @@ chapter_calendar() {
     click_text "Ava Nguyen"
     click_ref "Repeat this booking"
     click_ref "Tue"; click_ref "Thu"
-    "$B" fill 'input[wire\:model\.live="until"]' "2026-12-18" >/dev/null
+    "$B" fill 'input[wire\:model\.live="until"]' "$UNTIL" >/dev/null
     settle; tidy
     scroll_to_card "Repeat this booking" 100
     shot book-session-repeat
+
+    vp 1440x1100
+    go "/sessions/book?date=$OVERLAP_DATE&time=$OVERLAP_TIME"
+    click_text "Ben Okafor"; settle; tidy
+    shot book-session-overlap
 
     vp 1440x1100
     go "/sessions/$SERIES_SESSION"; tidy
@@ -205,7 +252,7 @@ chapter_client_emails() {
     mkdir -p storage/app/docs-build
     artisan_eval "require 'scripts/docs/render-emails.php';"
     vp 900x1150
-    for name in invite receipt wallet-link; do
+    for name in invite receipt receipt-late-cancel wallet-link invoice; do
         "$B" goto "file://$PWD/storage/app/docs-build/email-$name.html" >/dev/null
         sleep 0.8
         shot "email-$name"
@@ -222,6 +269,12 @@ chapter_portal() {
     shot portal-list
     click_text "Calendar"; settle; tidy
     shot portal-calendar
+
+    url=$(artisan_eval "\$c = App\\Models\\Client::withoutGlobalScopes()->find($HANA); \$c->ensurePortalToken(); echo \$c->portalUrl();" | tail -1)
+    url="${BASE_URL}/${url#*://*/}"
+    vp 1100x900
+    "$B" goto "$url" >/dev/null; settle; tidy
+    shot portal-invoice
 }
 
 # ─── Chapter 10: Reports (August has a full month of demo sessions) ────────────
@@ -252,7 +305,7 @@ chapter_platform_admin() {
 optimize() {
     # Palette PNGs are a third of the size with no visible change on flat UI screenshots.
     for f in "$IMG"/*.png; do
-        magick "$f" -strip -colors 256 -define png:compression-level=9 "png8:$f"
+        magick "$f" -strip +dither -colors 256 -define png:compression-level=9 "png8:$f"
     done
     du -sh "$IMG"
 }
@@ -266,6 +319,7 @@ main() {
     chapter_settings
     chapter_services_and_plans
     chapter_clients
+    chapter_invoices
     chapter_sessions
     chapter_calendar
     chapter_client_emails

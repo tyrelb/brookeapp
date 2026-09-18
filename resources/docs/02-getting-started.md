@@ -29,9 +29,9 @@ The app is flexible, but this order avoids backtracking, because each step is us
 1. **Settings → Business.** Your business name, phone, whether you are registered for GST and your GST number, which payment methods you accept, your e-Transfer email, and the booking instructions that go into every client email. *See the Settings chapter.*
 2. **Settings → Gyms.** Add the gym or studio you rent space at and how it charges you. This lets the Gym usage report reconcile your monthly gym invoice. Skip it if you do not rent gym space. *See the Settings chapter.*
 3. **Services.** What you offer and how long a session usually lasts. Most trainers start with one or two. *See the Services and plans chapter.*
-4. **Plans.** The rate grid for pay-as-you-go clients, and the fee for monthly members. You can have several plans so long-time clients can keep an older rate. *See the Services and plans chapter.*
+4. **Plans.** The rate grid for pay-as-you-go and family clients, the fee for monthly members, and a package size if you sell sessions in blocks. You can have several plans so long-time clients can keep an older rate. *See the Services and plans chapter.*
 5. **Clients.** Add each person, choose their plan, and record their first deposit. *See the Clients and Fitness Wallets chapter.*
 
-After that, day-to-day use is just **Log session** after training, **Book session** for anything in the future, and **Record payment** when money comes in.
+After that, day-to-day use is just **Log session** after training, **Book session** for anything in the future, **Request payment** when a wallet runs low, and **Record payment** when money comes in.
 
 > **Tip:** You do not need to enter history. Start from today: record each client's current balance as a single deposit, and everything from here on is tracked.

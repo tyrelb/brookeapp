@@ -36,7 +36,7 @@ The dashboard is the first thing you see after logging in. It answers "how is th
 The sidebar on the left is the same on every page:
 
 - **Training**: Dashboard, Clients, Calendar and Sessions. This is where you spend most of your time.
-- **Pricing**: Plans and Services. Set these up once, then rarely touch them.
+- **Pricing**: Plans, Services and Invoices. Plans and services are set up once and rarely touched; Invoices is where you chase money you have asked for.
 - **Reports**: Monthly report, Annual report and Gym usage.
 - **Your name** at the bottom opens a menu with Settings, this Documentation, and Log Out.
 

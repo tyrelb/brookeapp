@@ -1,4 +1,4 @@
-BrookeApp sends a small number of emails to clients on your behalf. They come from the app's address with your business name, and replies go to your own email. Every one of them includes your booking instructions and a button to the client's private Fitness Wallet page.
+BrookeApp sends a small number of emails to clients on your behalf. They come from the app's address with your business name, and replies go to your own email. They carry the BrookeApp badge and purple accents so they match the wallet page the client already knows. Every one of them includes your booking instructions and a button to the client's private Fitness Wallet page.
 
 Two switches in **Settings → Business** decide whether the invite and receipt options are ticked by default on each form. You can still change either one per session.
 
@@ -23,6 +23,13 @@ Sent when you complete a session with **Email attendees a receipt** ticked, or w
 For a monthly member the receipt confirms the session and shows any amount owing on their account instead of a wallet balance.
 
 For a **late cancel** the receipt is headed *Missed / late-cancelled session* and shows your reason. The charge is labelled as a late cancellation, and a family's receipt lists who was **booked** instead of who trained. If you left a note for someone who did train, it appears under the session details.
+
+## Invoice, reminder and thank-you
+
+Sent from **Request payment**, **Remind** and **Mark paid** (see Requesting payment and invoices). The invoice shows the amount with GST, the due date, your note, how to pay, and a link to the wallet page; a reminder adds what has been received and what is left; the thank-you confirms the payment and the new balance.
+
+![The invoice email](/images/docs/email-invoice.png)
+*An invoice for a package of sessions, with the trainer's payment details.*
 
 ## Wallet link
 

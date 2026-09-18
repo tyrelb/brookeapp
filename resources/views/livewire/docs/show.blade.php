@@ -1,5 +1,5 @@
 <div class="flex h-full w-full flex-1 flex-col">
-    <x-page-header title="Documentation" subtitle="How to use BrookeApp, step by step" class="print:hidden">
+    <x-page-header title="Documentation" :subtitle="'How to use BrookeApp, step by step · Version '.config('app.version')" class="print:hidden">
         <x-slot:actions>
             @if ($hasPdf)
                 <flux:button :href="route('docs.pdf')" target="_blank" icon="arrow-down-tray" variant="primary">Download PDF</flux:button>

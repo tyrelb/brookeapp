@@ -220,3 +220,28 @@ scroll_to_card() {
     js "window.scrollTo(0, Math.max(0, ${y} - ${2:-80}));'scrolled'" >/dev/null
     sleep 0.3
 }
+
+# Toggle a date on the Bulk log month picker (the day buttons carry wire:click="toggleDate('YYYY-MM-DD')").
+pick_bulk_date() {
+    js "(function(d){var b=[].slice.call(document.querySelectorAll('button[wire\\\\:click]')).find(function(x){return x.getAttribute('wire:click')===\"toggleDate('\"+d+\"')\";});if(!b){return 'NOT FOUND: '+d;}b.click();return 'picked '+d;})($(jstr "$1"))"
+    settle
+}
+
+# Log in, logging out first if the browser still holds a session (the login page would redirect).
+login() {
+    go /login
+    if [ "$(js "!!document.querySelector('input[type=email]')")" != "true" ]; then
+        logout
+        go /login
+    fi
+    "$B" fill 'input[type=email]' "$1" >/dev/null
+    "$B" fill 'input[type=password]' "$2" >/dev/null
+    "$B" click 'button[type=submit]' >/dev/null
+    settle 30000 1
+    "$B" url
+}
+
+# Bounding box of the block that holds a heading and the table under it (heading text $1).
+rect_of_section() {
+    js "(function(t){var els=[].slice.call(document.querySelectorAll('h1,h2,h3,h4,div,span,p'));var m=els.filter(function(e){return e.children.length<3&&e.textContent.replace(/\\s+/g,' ').trim()===t;});if(!m.length){return 'NOT FOUND';}var box=m[0];while(box.parentElement&&!box.querySelector('table')){box=box.parentElement;}var r=box.getBoundingClientRect();return Math.max(0,Math.floor(r.left+window.scrollX-8))+','+Math.max(0,Math.floor(r.top+window.scrollY-8))+','+Math.ceil(r.width+16)+','+Math.ceil(r.height+16);})($(jstr "$1"))"
+}

@@ -52,6 +52,23 @@ Cover sessions show up in three places: on that gym's usage report as a credit t
 
 > **Note:** A cover session cannot also include your own clients. If you trained a mix, log two sessions — otherwise it is ambiguous whether you owe the gym usage for your own client that hour.
 
+## Log many sessions at once
+
+For a backlog, or when you are moving onto BrookeApp from a notebook, **Bulk log** logs up to 50 sessions with one set-up. Click **Log session**, then **Bulk log** at the top right.
+
+![The Bulk log sessions page with dates picked](/images/docs/bulk-log.png)
+*One service, one group of clients, many dates. Every date becomes its own session.*
+
+1. Choose the **Service**, an optional **Start time**, the **Duration**, and the **Gym** if you have more than one. **Notes** are added to every session in the batch.
+2. **Add clients**. The same people are marked as attended on every date, so split a batch if the group changed.
+3. **Pick the dates** by clicking days on the month calendar (click again to drop one), or **paste dates** from a spreadsheet column, one per line or separated by commas, and click **Add pasted dates**. The counter shows how many of the 50 you have used.
+4. If a picked date already has a session for one of these clients, the date is marked with an amber **!** and the page warns you, so an import cannot quietly charge someone twice.
+5. Check the total the batch will charge, decide whether to **Email attendees a receipt for each session** (usually left off for past sessions), and click **Log N sessions & charge**. **Save all as scheduled** stores them without charging, for dates still to come.
+
+The whole batch is saved together: if anything is wrong, nothing is charged. Each session is a normal completed session afterwards and can be reopened on its own.
+
+> **Note:** Bulk log has the **Charge the gym** switch but no per-person attendance choice, because one attendee list is stamped onto every date. Log a session with a late cancel on its own.
+
 ## The Sessions list
 
 **Sessions** in the sidebar lists everything you have logged or booked, newest first.

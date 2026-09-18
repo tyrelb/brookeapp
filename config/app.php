@@ -17,6 +17,20 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Release
+    |--------------------------------------------------------------------------
+    |
+    | The version in the VERSION file at the repository root, and the date that
+    | version was released. Shown on the Documentation page and the PDF guide.
+    |
+    */
+
+    'version' => trim((string) @file_get_contents(__DIR__.'/../VERSION')) ?: '0.0.0',
+
+    'released' => '2026-09-18',
+
+    /*
+    |--------------------------------------------------------------------------
     | Application Environment
     |--------------------------------------------------------------------------
     |

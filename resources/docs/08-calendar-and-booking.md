@@ -48,7 +48,11 @@ Click **Book session** on the dashboard or the calendar.
 1. Set the **Service**, **Date**, **Start time** and **Duration**, and the **Gym** if you have more than one.
 2. **Add clients**. The Attendees table shows the expected charge for each person so you can quote it, but nothing is charged until the session is completed.
 3. Leave **Email attendees a calendar invite** ticked to send each client a message with an `.ics` invite they can accept into their phone's calendar. Clients without an email address are skipped.
-4. Click **Book session**.
+4. If the slot overlaps something already in your diary, a notice headed **Something else is booked at this time** lists each clash with its time, service and attendees, and the button changes to **Book session anyway**. Nothing is blocked, because back-to-back sessions and hand-offs look like clashes too; only you know which are real. A repeat reports how many of its dates land on an existing session.
+5. Click **Book session**.
+
+![The booking form warning about an overlapping session](/images/docs/book-session-overlap.png)
+*An overlap is a warning, not a stop. The calendar marks the same clashes in amber.*
 
 ## Repeat a booking
 

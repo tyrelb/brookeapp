@@ -6,9 +6,12 @@ Each client has a private web page that shows their side of the story: balance, 
 *Ava's page. The balance is followed by a plain-English reading of it, such as "about 5 single sessions left". For a family it counts whole-family sessions, priced as though every member attends, so the number is never optimistic.*
 
 - **Fitness Wallet balance** (or **Account balance** for a member) with a sentence explaining what it means.
-- **Your plan** and how it bills, and **How to pay** with your accepted methods and e-Transfer address.
+- **Your plan** and how it bills, and **How to pay** with your accepted methods and e-Transfer address. An amber **Payment requested** panel appears above everything when an invoice is open, with the number, amount, due date and your message, and paid invoices are listed lower down with the date they were settled.
 - **Book or change a session** repeats that only you can book, move or cancel, with your booking instructions, phone and email.
 - **Upcoming sessions**, then **Activity** (deposits and charges) and **Training history** (sessions, with a "Missed / late cancel" badge and your reason for a charged late cancel, and a "No-show" badge for one that wasn't charged). Long lists are split into pages.
+
+![The top of a wallet page with an open payment request](/images/docs/portal-invoice.png)
+*A client with an open invoice sees it, with the due date, right under how to pay.*
 
 Switch to **Calendar** with the buttons beside "Your sessions" to see the month at a glance, with arrows for previous and next months.
 
