@@ -9,10 +9,12 @@
  * Uses the seeded demo trainer's data (php artisan migrate:fresh --seed).
  */
 
+use App\Mail\InvoiceMail;
 use App\Mail\SessionBookedMail;
 use App\Mail\SessionCompletedMail;
 use App\Mail\WalletLinkMail;
 use App\Models\Client;
+use App\Models\Invoice;
 use App\Models\SessionAttendee;
 use App\Models\TrainingSession;
 use App\Models\User;
@@ -34,4 +36,7 @@ file_put_contents("$dir/email-invite.html", (new SessionBookedMail($upcoming, $a
 file_put_contents("$dir/email-receipt.html", (new SessionCompletedMail($receiptFor))->render());
 file_put_contents("$dir/email-wallet-link.html", (new WalletLinkMail($ava))->render());
 
-echo "rendered 3 emails to $dir\n";
+$invoice = Invoice::whereNull('voided_at')->orderByDesc('id')->firstOrFail();
+file_put_contents("$dir/email-invoice.html", (new InvoiceMail($invoice))->render());
+
+echo "rendered 4 emails to $dir\n";

@@ -22,6 +22,8 @@ class Form extends Component
 
     public string $billing_day = '1';
 
+    public string $package_sessions = '';
+
     public string $description = '';
 
     public bool $active = true;
@@ -46,6 +48,7 @@ class Form extends Component
             $this->type = $plan->type->value;
             $this->monthly_fee = $plan->monthly_fee !== null ? number_format((float) $plan->monthly_fee, 2, '.', '') : '';
             $this->billing_day = (string) ($plan->billing_day ?? 1);
+            $this->package_sessions = (string) ($plan->package_sessions ?? '');
             $this->description = (string) $plan->description;
             $this->active = $plan->active;
 
@@ -67,6 +70,7 @@ class Form extends Component
             'type' => ['required', Rule::enum(PlanType::class)],
             'monthly_fee' => [Rule::requiredIf($isMonthly), 'nullable', 'numeric', 'min:0', 'max:100000'],
             'billing_day' => [Rule::requiredIf($isMonthly), 'nullable', 'integer', 'min:1', 'max:28'],
+            'package_sessions' => ['nullable', 'integer', 'min:1', 'max:500'],
             'description' => ['nullable', 'string', 'max:1000'],
             'active' => ['boolean'],
             'rates' => ['array'],
@@ -76,10 +80,15 @@ class Form extends Component
             'rates.*.*.numeric' => 'Rates must be numbers.',
         ]);
 
-        if (! $isMonthly) {
+        if ($isMonthly) {
+            // A membership is not sold by the session, so a package size means nothing.
+            $data['package_sessions'] = null;
+        } else {
             $data['monthly_fee'] = null;
             $data['billing_day'] = null;
         }
+
+        $data['package_sessions'] = $data['package_sessions'] ?: null;
 
         $data['description'] = $data['description'] ?: null;
         $rates = $data['rates'];

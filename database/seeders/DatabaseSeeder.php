@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Actions\BookSessionSeries;
 use App\Actions\CompleteTrainingSession;
+use App\Actions\CreateInvoice;
 use App\Actions\PostMonthlyFee;
 use App\Actions\RecordPayment;
 use App\Enums\GymBillingModel;
@@ -44,7 +45,7 @@ class DatabaseSeeder extends Seeder
         $pt = Service::create(['user_id' => $brooke->id, 'name' => 'Personal Training (60 min)', 'duration_minutes' => 60]);
         $group = Service::create(['user_id' => $brooke->id, 'name' => 'Small Group Strength (45 min)', 'duration_minutes' => 45]);
 
-        $standard = Plan::create(['user_id' => $brooke->id, 'name' => 'Standard pay-as-you-go', 'type' => PlanType::Wallet, 'description' => 'Deposit into your Fitness Wallet; sessions are deducted per person.']);
+        $standard = Plan::create(['user_id' => $brooke->id, 'name' => 'Standard pay-as-you-go', 'type' => PlanType::Wallet, 'package_sessions' => 20, 'description' => 'Deposit into your Fitness Wallet; sessions are deducted per person.']);
         $this->rates($standard, $pt, [1 => 60, 2 => 30, 3 => 25, 4 => 20]);
         $this->rates($standard, $group, [1 => 45, 2 => 25, 3 => 20, 4 => 15]);
 
@@ -112,6 +113,21 @@ class DatabaseSeeder extends Seeder
         }
 
         app(RecordPayment::class)->handle($barnes, 900, PaymentMethod::ETransfer, now()->subMonths(2)->startOfMonth()->addDays(2));
+
+        // Two payment requests: one Hana still owes (her wallet is nearly empty) and one
+        // Ava already settled, so the client page shows both sides of the feature.
+        $outstanding = app(CreateInvoice::class)->handle(
+            $clients['Hana'], 1200, now()->subDays(3), now()->addDays(4),
+            'Whenever suits — this covers your next 20 sessions.',
+        );
+        $outstanding->forceFill(['sent_at' => now()->subDays(3)])->save();
+
+        $settled = app(CreateInvoice::class)->handle($clients['Ava'], 600, now()->subMonths(1), now()->subMonths(1)->addDays(7));
+        $settled->forceFill(['sent_at' => now()->subMonths(1)])->save();
+        app(RecordPayment::class)->handle(
+            $clients['Ava'], (float) $settled->total, PaymentMethod::ETransfer,
+            now()->subMonths(1)->addDays(2), null, null, $settled,
+        );
 
         // Monthly fees for the last two months and this month, paid for the earlier ones.
         foreach ([2, 1, 0] as $monthsAgo) {

@@ -16,6 +16,9 @@
                 <flux:input wire:model="billing_day" label="Billing day of month" type="number" min="1" max="28" description="1–28 so every month works." />
             </div>
         @else
+            <flux:input wire:model="package_sessions" label="Package size (optional)" type="number" min="1" max="500" placeholder="50"
+                description="How many sessions this plan is sold in. Used to suggest an amount when you request payment — leave blank if it isn't sold as a package." />
+
             <div>
                 <flux:heading size="lg">Session rates</flux:heading>
                 <flux:subheading>Per person, before GST. Leave a tier blank to fall back to the next lower tier (e.g. a Triple with no rate uses the Partner rate). Groups of five or more pay the Quad rate.</flux:subheading>

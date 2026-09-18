@@ -34,6 +34,7 @@ class WalletTransaction extends Model
         'transacted_on',
         'billing_period',
         'training_session_id',
+        'invoice_id',
         'description',
         'voided_at',
     ];
@@ -66,6 +67,12 @@ class WalletTransaction extends Model
     public function trainingSession(): BelongsTo
     {
         return $this->belongsTo(TrainingSession::class);
+    }
+
+    /** The request this money answers, when the trainer said so. Usually null. */
+    public function invoice(): BelongsTo
+    {
+        return $this->belongsTo(Invoice::class);
     }
 
     /** @return HasMany<WalletTransactionRevision, $this> */

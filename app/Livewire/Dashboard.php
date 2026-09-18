@@ -8,7 +8,7 @@ use App\Enums\TransactionType;
 use App\Models\Client;
 use App\Models\TrainingSession;
 use App\Models\WalletTransaction;
-use App\Services\GstCalculator;
+use App\Services\WalletOutlook;
 use Illuminate\Support\Collection;
 use Livewire\Attributes\Title;
 use Livewire\Component;
@@ -69,14 +69,7 @@ class Dashboard extends Component
             ->whereHas('plan', fn ($q) => $q->whereIn('type', [PlanType::Wallet->value, PlanType::Family->value]))
             ->with('plan.rates', 'activeMembers')
             ->get()
-            ->filter(function (Client $client) use ($gstRate) {
-                $people = max(1, $client->isOnFamilyPlan() ? $client->activeMembers->count() : 1);
-                $rate = $client->plan->rateFor($client->plan->rates->first()?->service_id ?? 0, $people);
-                $unit = $rate?->unit_price ?? $client->plan->rates->where('headcount', 1)->min('unit_price');
-                $threshold = $unit === null ? 0.0 : GstCalculator::totalWithGst((float) $unit * $people, $gstRate);
-
-                return (float) $client->balance < $threshold;
-            })
+            ->filter(fn (Client $client) => WalletOutlook::isRunningLow($client, (float) $client->balance, $gstRate))
             ->sortBy('balance')
             ->values();
     }

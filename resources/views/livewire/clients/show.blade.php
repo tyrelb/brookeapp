@@ -10,8 +10,11 @@
             <flux:badge size="sm" class="ml-1" :color="$client->isActive() ? 'green' : 'zinc'">{{ $client->status->label() }}</flux:badge>
         </x-slot:subtitle>
         <x-slot:actions>
+            <flux:modal.trigger name="request-payment">
+                <flux:button icon="paper-airplane" variant="primary">Request payment</flux:button>
+            </flux:modal.trigger>
             <flux:modal.trigger name="record-payment">
-                <flux:button icon="banknotes" variant="primary">Record payment</flux:button>
+                <flux:button icon="banknotes">Record payment</flux:button>
             </flux:modal.trigger>
             <flux:modal.trigger name="post-adjustment">
                 <flux:button icon="adjustments-horizontal">Adjustment</flux:button>
@@ -30,7 +33,15 @@
             <div class="mt-1 text-3xl font-semibold tracking-tight"><x-money :amount="$balance" /></div>
             <div class="mt-1 text-xs text-zinc-500">
                 @if ($balance < 0) Amount owing @elseif ($balance > 0) Prepaid credit (GST included) @else Settled @endif
+                @if ($sessionsLeft !== null)
+                    · about {{ $sessionsLeft }} {{ Str::plural('session', $sessionsLeft) }} left
+                @endif
             </div>
+            @if ($runningLow)
+                <flux:modal.trigger name="request-payment">
+                    <flux:button size="xs" icon="paper-airplane" class="mt-3">Ask for a top-up</flux:button>
+                </flux:modal.trigger>
+            @endif
         </div>
         <div class="rounded-xl border border-zinc-200 bg-white p-5 text-sm dark:border-zinc-700 dark:bg-zinc-900">
             <div class="text-zinc-500 dark:text-zinc-400">Contact</div>
@@ -76,6 +87,46 @@
             </div>
         </div>
     </section>
+
+    @if ($invoices->isNotEmpty())
+        <section>
+            <flux:heading size="lg" class="mb-3">Payment requests</flux:heading>
+            <flux:table>
+                <flux:table.columns>
+                    <flux:table.column>Number</flux:table.column>
+                    <flux:table.column>Issued</flux:table.column>
+                    <flux:table.column>Due</flux:table.column>
+                    <flux:table.column>For</flux:table.column>
+                    <flux:table.column align="end">Total</flux:table.column>
+                    <flux:table.column align="end">Paid</flux:table.column>
+                    <flux:table.column>Status</flux:table.column>
+                    <flux:table.column />
+                </flux:table.columns>
+                <flux:table.rows>
+                    @foreach ($invoices as $invoice)
+                        @php($status = $invoice->status())
+                        <flux:table.row :key="'invoice-'.$invoice->id" @class(['opacity-60 line-through' => $invoice->isVoided()])>
+                            <flux:table.cell variant="strong">{{ $invoice->number }}</flux:table.cell>
+                            <flux:table.cell>{{ $invoice->issued_on->format('M j, Y') }}</flux:table.cell>
+                            <flux:table.cell>{{ $invoice->due_on?->format('M j, Y') ?? '—' }}</flux:table.cell>
+                            <flux:table.cell>{{ collect($invoice->lines)->pluck('description')->join(', ') }}</flux:table.cell>
+                            <flux:table.cell align="end" class="tabular-nums">{{ money($invoice->total) }}</flux:table.cell>
+                            <flux:table.cell align="end" class="tabular-nums">{{ $invoice->paidAmount() > 0 ? money($invoice->paidAmount()) : '—' }}</flux:table.cell>
+                            <flux:table.cell><flux:badge size="sm" :color="$status->color()">{{ $status->label() }}</flux:badge></flux:table.cell>
+                            <flux:table.cell>
+                                @unless ($invoice->isVoided())
+                                    <div class="flex justify-end gap-2">
+                                        <flux:button size="xs" variant="ghost" wire:click="resendInvoice({{ $invoice->id }})" wire:confirm="Email {{ $invoice->number }} to {{ $client->email ?: 'this client (no email on file)' }} again?">Resend</flux:button>
+                                        <flux:button size="xs" variant="ghost" wire:click="voidInvoice({{ $invoice->id }})" wire:confirm="Void {{ $invoice->number }}? Any payment already recorded against it stays on the ledger.">Void</flux:button>
+                                    </div>
+                                @endunless
+                            </flux:table.cell>
+                        </flux:table.row>
+                    @endforeach
+                </flux:table.rows>
+            </flux:table>
+        </section>
+    @endif
 
     <section>
         <flux:heading size="lg" class="mb-3">Ledger</flux:heading>
@@ -175,6 +226,62 @@
         @endif
     </section>
 
+    <flux:modal name="request-payment" class="md:w-[30rem]">
+        <form wire:submit="requestPayment" class="space-y-5">
+            <div>
+                <flux:heading size="lg">Request payment</flux:heading>
+                <flux:subheading>
+                    {{ $client->isOnMonthlyPlan()
+                        ? 'Email '.$client->first_name.' a request for their membership fee.'
+                        : 'Email '.$client->first_name.' a request to top up their Fitness Wallet.' }}
+                </flux:subheading>
+            </div>
+
+            @unless ($client->email)
+                <flux:callout variant="warning" icon="exclamation-triangle">
+                    <flux:callout.text>{{ $client->first_name }} has no email address, so nothing can be sent. <flux:link :href="route('clients.edit', $client)" wire:navigate>Add one</flux:link> first.</flux:callout.text>
+                </flux:callout>
+            @endunless
+
+            @if ($runningLow)
+                <flux:callout icon="exclamation-triangle">
+                    <flux:callout.text>
+                        {{ $client->first_name }} has {{ money($balance) }} left{{ $sessionsLeft !== null ? ', about '.$sessionsLeft.' '.Str::plural('session', $sessionsLeft) : '' }}.
+                    </flux:callout.text>
+                </flux:callout>
+            @endif
+
+            <div>
+                <flux:input wire:model.live.debounce.400ms="requestAmount" label="Amount (before GST)" type="number" step="0.01" min="0.01" placeholder="0.00" />
+                <div class="mt-1.5 space-y-0.5 text-xs text-zinc-500">
+                    @if ($suggestion)
+                        <div>Suggested: {{ collect($suggestion['lines'])->pluck('description')->join(', ') }} — {{ money($suggestion['subtotal']) }}</div>
+                    @elseif (! $client->isOnMonthlyPlan())
+                        <div>No suggestion yet — set a package size on <flux:link :href="route('plans.index')" wire:navigate>{{ $client->plan?->name ?? 'this client\'s plan' }}</flux:link> and it will fill in.</div>
+                    @endif
+                    @if ($requestTotals)
+                        <div class="tabular-nums">
+                            GST ({{ rtrim(rtrim(number_format($requestTotals['gst_rate'], 2), '0'), '.') }}%) {{ money($requestTotals['gst']) }}
+                            · Total <span class="font-medium text-zinc-700 dark:text-zinc-200">{{ money($requestTotals['total']) }}</span>
+                        </div>
+                    @endif
+                </div>
+            </div>
+
+            <div class="grid gap-4 sm:grid-cols-2">
+                <flux:input wire:model="requestIssuedOn" label="Issued" type="date" />
+                <flux:input wire:model="requestDueOn" label="Due" type="date" />
+            </div>
+
+            <flux:textarea wire:model="requestMessage" label="Message" placeholder="Optional — added to the email." rows="2" />
+
+            <div class="flex justify-end gap-2">
+                <flux:modal.close><flux:button variant="ghost">Cancel</flux:button></flux:modal.close>
+                <flux:button type="submit" variant="primary" :disabled="! $client->email">Send request</flux:button>
+            </div>
+        </form>
+    </flux:modal>
+
     <flux:modal name="record-payment" class="md:w-[28rem]">
         <form wire:submit="recordPayment" class="space-y-5">
             <div>
@@ -188,6 +295,14 @@
                 @endforeach
             </flux:select>
             <flux:input wire:model="paymentDate" label="Date received" type="date" />
+            @if ($openInvoices->isNotEmpty())
+                <flux:select wire:model="paymentInvoiceId" label="Against a request" description="Leave unset if this money isn't answering one.">
+                    <flux:select.option value="">Not against a request</flux:select.option>
+                    @foreach ($openInvoices as $open)
+                        <flux:select.option value="{{ $open->id }}">{{ $open->number }} — {{ money($open->outstandingAmount()) }} outstanding</flux:select.option>
+                    @endforeach
+                </flux:select>
+            @endif
             <flux:input wire:model="paymentReference" label="Reference" placeholder="Cheque # or e-Transfer reference" />
             <flux:input wire:model="paymentNote" label="Note" placeholder="Optional" />
             <div class="flex justify-end gap-2">

@@ -12,8 +12,8 @@
                 @else
                     @if ($balance < 0)
                         Your wallet is overdrawn; please top up before your next session.
-                    @elseif ($singleRate)
-                        Prepaid credit, GST included · about {{ floor($balance / $singleRate) }} {{ $client->isOnFamilyPlan() ? 'family' : 'single' }} {{ Str::plural('session', (int) floor($balance / $singleRate)) }} left.
+                    @elseif ($sessionsLeft !== null)
+                        Prepaid credit, GST included · about {{ $sessionsLeft }} {{ $client->isOnFamilyPlan() ? 'family' : 'single' }} {{ Str::plural('session', $sessionsLeft) }} left.
                     @else
                         Prepaid credit, GST included.
                     @endif
@@ -38,6 +38,53 @@
             </div>
         </div>
     </div>
+
+    @if ($invoices->isNotEmpty())
+        <section class="mt-6 rounded-xl border border-amber-300 bg-amber-50 p-5 dark:border-amber-700/60 dark:bg-amber-950/30">
+            <flux:heading>{{ $invoices->count() === 1 ? 'Payment requested' : 'Payments requested' }}</flux:heading>
+            <flux:text class="mt-1 text-sm">{{ $trainer->displayName() }} has asked for the following. Please get in touch once it's sent so it can be marked off.</flux:text>
+
+            <div class="mt-3 space-y-3">
+                @foreach ($invoices as $invoice)
+                    <div class="rounded-lg border border-amber-200 bg-white p-3 text-sm dark:border-amber-800/60 dark:bg-zinc-900">
+                        <div class="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+                            <span class="font-medium">{{ $invoice->number }}</span>
+                            <span class="text-lg font-semibold tabular-nums">{{ money($invoice->outstandingAmount()) }}</span>
+                        </div>
+                        <div class="mt-1 text-zinc-600 dark:text-zinc-400">
+                            {{ collect($invoice->lines)->pluck('description')->join(', ') }}
+                            @if ((float) $invoice->gst_amount > 0)
+                                <span class="text-zinc-500">(includes {{ money($invoice->gst_amount) }} GST)</span>
+                            @endif
+                        </div>
+                        <div class="mt-1 text-xs text-zinc-500">
+                            Issued {{ $invoice->issued_on->format('M j, Y') }}
+                            @if ($invoice->due_on)
+                                · due {{ $invoice->due_on->format('M j, Y') }}
+                                @if ($invoice->due_on->isBefore(today()))
+                                    <flux:badge size="sm" color="red" class="ml-1">Overdue</flux:badge>
+                                @endif
+                            @endif
+                            @if ($invoice->paidAmount() > 0)
+                                · {{ money($invoice->paidAmount()) }} of {{ money($invoice->total) }} received
+                            @endif
+                        </div>
+                        @if ($invoice->message)
+                            <div class="mt-2 whitespace-pre-line text-zinc-600 dark:text-zinc-400">{{ $invoice->message }}</div>
+                        @endif
+                    </div>
+                @endforeach
+            </div>
+
+            <div class="mt-3 text-sm">
+                <span class="text-zinc-500">How to pay:</span>
+                {{ collect($trainer->enabledPaymentMethods())->map->label()->join(', ') }}
+                @if ($trainer->etransfer_email && $trainer->acceptsPaymentMethod(\App\Enums\PaymentMethod::ETransfer))
+                    · e-Transfer to <span class="font-medium">{{ $trainer->etransfer_email }}</span>
+                @endif
+            </div>
+        </section>
+    @endif
 
     <section class="mt-6 rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-800">
         <flux:heading>Book or change a session</flux:heading>

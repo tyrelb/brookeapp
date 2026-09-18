@@ -2,18 +2,25 @@
 
 namespace App\Livewire\Clients;
 
+use App\Actions\CreateInvoice;
 use App\Actions\PostAdjustment;
 use App\Actions\PostMonthlyFee;
 use App\Actions\RecordPayment;
+use App\Actions\SendInvoice;
 use App\Actions\UpdateTransaction;
 use App\Enums\PaymentMethod;
 use App\Enums\TransactionType;
 use App\Exceptions\BillingException;
 use App\Mail\WalletLinkMail;
 use App\Models\Client;
+use App\Models\Invoice;
 use App\Models\WalletTransaction;
 use App\Models\WalletTransactionRevision;
+use App\Services\GstCalculator;
+use App\Services\PaymentRequestSuggester;
+use App\Services\WalletOutlook;
 use Flux\Flux;
+use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Validation\Rule;
 use Livewire\Component;
@@ -32,6 +39,17 @@ class Show extends Component
     public string $paymentReference = '';
 
     public string $paymentNote = '';
+
+    public string $paymentInvoiceId = '';
+
+    // Request payment modal
+    public string $requestAmount = '';
+
+    public string $requestIssuedOn = '';
+
+    public string $requestDueOn = '';
+
+    public string $requestMessage = '';
 
     // Adjustment / refund modal
     public string $adjustmentKind = 'credit'; // credit | debit | refund
@@ -72,6 +90,102 @@ class Show extends Component
         $this->adjustmentDate = today()->toDateString();
         $this->paymentMethod = auth()->user()->enabledPaymentMethods()[0]->value ?? '';
         $this->adjustmentMethod = $this->paymentMethod;
+
+        $this->requestIssuedOn = today()->toDateString();
+        $this->requestDueOn = today()->addDays(7)->toDateString();
+
+        $suggestion = app(PaymentRequestSuggester::class)->for($client);
+        $this->requestAmount = $suggestion ? number_format($suggestion['subtotal'], 2, '.', '') : '';
+
+        // A payment usually answers the oldest thing still owed.
+        $this->paymentInvoiceId = (string) ($this->outstandingInvoices()->first()?->id ?? '');
+    }
+
+    /**
+     * Ask the client for money: raise a numbered request and email it.
+     */
+    public function requestPayment(CreateInvoice $createInvoice): void
+    {
+        $this->authorize('update', $this->client);
+
+        if (! $this->client->email) {
+            Flux::toast('Add an email address for this client first.', variant: 'warning');
+
+            return;
+        }
+
+        $this->validate([
+            'requestAmount' => ['required', 'numeric', 'min:0.01', 'max:100000'],
+            'requestIssuedOn' => ['required', 'date'],
+            'requestDueOn' => ['nullable', 'date', 'after_or_equal:requestIssuedOn'],
+            'requestMessage' => ['nullable', 'string', 'max:500'],
+        ]);
+
+        try {
+            $invoice = $createInvoice->handle(
+                $this->client,
+                (float) $this->requestAmount,
+                $this->requestIssuedOn,
+                $this->requestDueOn ?: null,
+                $this->requestMessage,
+            );
+        } catch (BillingException $e) {
+            $this->addError('requestAmount', $e->getMessage());
+
+            return;
+        }
+
+        $this->reset('requestMessage');
+        Flux::modal('request-payment')->close();
+
+        try {
+            app(SendInvoice::class)->handle($invoice);
+        } catch (BillingException $e) {
+            // The request exists either way; say so rather than pretend it was sent.
+            Flux::toast("{$invoice->number} was created but not emailed: {$e->getMessage()}", variant: 'warning');
+
+            return;
+        }
+
+        Flux::toast("{$invoice->number} for {$this->moneyLabel($invoice->total)} emailed to {$this->client->email}.", variant: 'success');
+    }
+
+    public function resendInvoice(int $invoiceId): void
+    {
+        $this->authorize('update', $this->client);
+
+        $invoice = $this->invoice($invoiceId);
+
+        try {
+            app(SendInvoice::class)->handle($invoice);
+        } catch (BillingException $e) {
+            Flux::toast($e->getMessage(), variant: 'warning');
+
+            return;
+        }
+
+        Flux::toast("{$invoice->number} emailed to {$this->client->email} again.", variant: 'success');
+    }
+
+    public function voidInvoice(int $invoiceId): void
+    {
+        $this->authorize('update', $this->client);
+
+        $invoice = $this->invoice($invoiceId);
+
+        if ($invoice->isVoided()) {
+            return;
+        }
+
+        // Only the request is cancelled. Any money that already arrived against it
+        // stays in the ledger, because it really did arrive.
+        $invoice->forceFill(['voided_at' => now()])->save();
+
+        if ((int) $this->paymentInvoiceId === $invoice->id) {
+            $this->paymentInvoiceId = '';
+        }
+
+        Flux::toast("{$invoice->number} voided.", variant: 'success');
     }
 
     public function recordPayment(RecordPayment $recordPayment): void
@@ -84,6 +198,7 @@ class Show extends Component
             'paymentDate' => ['required', 'date'],
             'paymentReference' => ['nullable', 'string', 'max:100'],
             'paymentNote' => ['nullable', 'string', 'max:255'],
+            'paymentInvoiceId' => ['nullable', Rule::exists('invoices', 'id')->where('client_id', $this->client->id)],
         ]);
 
         try {
@@ -94,6 +209,7 @@ class Show extends Component
                 $this->paymentDate,
                 $this->paymentReference,
                 $this->paymentNote,
+                $this->paymentInvoiceId ? $this->invoice((int) $this->paymentInvoiceId) : null,
             );
         } catch (BillingException $e) {
             $this->addError('paymentAmount', $e->getMessage());
@@ -103,6 +219,7 @@ class Show extends Component
 
         $this->reset('paymentAmount', 'paymentReference', 'paymentNote');
         $this->paymentDate = today()->toDateString();
+        $this->paymentInvoiceId = (string) ($this->outstandingInvoices()->first()?->id ?? '');
         Flux::modal('record-payment')->close();
         Flux::toast('Payment recorded.', variant: 'success');
     }
@@ -297,12 +414,67 @@ class Show extends Component
             ->findOrFail($transactionId);
     }
 
+    private function invoice(int $invoiceId): Invoice
+    {
+        return Invoice::query()
+            ->where('client_id', $this->client->id)
+            ->findOrFail($invoiceId);
+    }
+
+    /**
+     * Still owed, oldest first — what a payment is most likely answering.
+     *
+     * @return Collection<int, Invoice>
+     */
+    private function outstandingInvoices()
+    {
+        return $this->client->invoices()->outstanding()->withPaidAmount()->get()
+            ->sortBy([['issued_on', 'asc'], ['id', 'asc']])
+            ->values();
+    }
+
+    /**
+     * The GST breakdown under the amount box, recalculated as the trainer types.
+     * Blank while the figure is unusable rather than quoting a number they never meant.
+     *
+     * @return array{subtotal: float, gst: float, gst_rate: float, total: float}|null
+     */
+    private function requestTotals(): ?array
+    {
+        if (! is_numeric($this->requestAmount)) {
+            return null;
+        }
+
+        $subtotal = round((float) $this->requestAmount, 2);
+
+        if ($subtotal <= 0) {
+            return null;
+        }
+
+        $rate = auth()->user()->effectiveGstRate();
+        $gst = GstCalculator::onExclusive($subtotal, $rate);
+
+        return [
+            'subtotal' => $subtotal,
+            'gst' => $gst,
+            'gst_rate' => $rate,
+            'total' => round($subtotal + $gst, 2),
+        ];
+    }
+
+    private function moneyLabel(float|string $amount): string
+    {
+        return money((float) $amount);
+    }
+
     public function render()
     {
         $this->client->load(['plan', 'gym', 'activeMembers']);
 
+        $balance = $this->client->balance();
+
         return view('livewire.clients.show', [
-            'balance' => $this->client->balance(),
+            'balance' => $balance,
             'transactions' => $this->client->transactions()
                 ->with('trainingSession.service')
                 ->withCount(['revisions as edit_count' => fn ($q) => $q->where('action', '!=', WalletTransactionRevision::ACTION_CREATED)])
@@ -319,6 +491,12 @@ class Show extends Component
                 ->values(),
             'paymentMethods' => auth()->user()->enabledPaymentMethods(),
             'walletUrl' => $this->client->portalUrl(),
+            'invoices' => $this->client->invoices()->withPaidAmount()->limit(50)->get(),
+            'openInvoices' => $this->outstandingInvoices(),
+            'suggestion' => app(PaymentRequestSuggester::class)->for($this->client),
+            'requestTotals' => $this->requestTotals(),
+            'sessionsLeft' => WalletOutlook::sessionsRemaining($this->client, $balance),
+            'runningLow' => WalletOutlook::isRunningLow($this->client, $balance),
         ])->title($this->client->full_name);
     }
 }

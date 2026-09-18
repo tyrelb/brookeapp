@@ -62,6 +62,29 @@ php artisan billing:post-monthly-fees            # run now
 php artisan billing:post-monthly-fees --date=2026-10-01
 ```
 
+## Requesting payment
+
+The client page has **Request payment** beside Record payment. It raises a numbered invoice
+(`INV-0001`, counted per trainer), emails it to the client, and lists it under **Payment
+requests** where it can be resent or voided.
+
+The amount is suggested from the client's plan and can be edited before sending:
+
+- **Monthly membership** — the monthly fee plus GST, whatever the current balance.
+- **Pay-as-you-go** — the plan's **package size** × its single-person rate, plus GST. Set the
+  package size on the plan (Pricing → Plans); leave it blank for plans that aren't sold in
+  blocks and the amount starts empty.
+
+Whether an invoice is paid is never stored — it is the sum of the non-voided payments linked
+to it. Record a payment and the **Against a request** box offers the oldest open one, so the
+invoice settles itself; void or edit that payment later and the invoice follows. A part
+payment leaves it partly paid, an overpayment settles it and the surplus stays as wallet
+credit. Voiding a request cancels the ask only; money that already arrived stays on the ledger.
+
+The email shows the breakdown, the trainer's accepted payment methods and e-Transfer address,
+and a link to the client's wallet page, which lists anything still outstanding. Emails are
+queued, so a worker must be running.
+
 ## Production (Laravel Forge, MySQL 8)
 
 1. Create a site with PHP 8.5 and a MySQL 8 database.
@@ -102,6 +125,7 @@ Trainers can set up to three **gyms** (Settings → Gyms), each with its own bil
 - **Phase 2** — scheduling calendar, booking emails with `.ics` invites, reschedule and cancellation updates, session receipts with remaining balance.
 - **Phase 3** — client magic-link Fitness Wallet page with balance, bookings and history, shareable from the client page and included in emails.
 - **Gym usage** — gyms with billing models and hourly rate cards, sessions tagged by gym, usage pro-rated by session length, monthly usage report with exclusions, finalize/reopen, CSV and print.
+- **Payment requests** — numbered invoices suggested from the client's plan, emailed with payment methods and a wallet link, settled by the payments linked to them.
 
 ## User guide
 

@@ -7,7 +7,7 @@ use App\Http\Controllers\Controller;
 use App\Models\Client;
 use App\Models\Scopes\TrainerScope;
 use App\Models\SessionAttendee;
-use App\Services\GstCalculator;
+use App\Services\WalletOutlook;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
 use Illuminate\View\View;
@@ -34,21 +34,24 @@ class WalletController extends Controller
         $trainer = $client->trainer;
         $view = $request->query('view') === 'calendar' ? 'calendar' : 'list';
 
-        $singleRate = null;
-        if ($client->isOnWalletPlan()) {
-            // A family's session costs one fare per member, so price the whole household —
-            // otherwise the estimate overstates their runway several times over.
-            $people = max(1, $client->isOnFamilyPlan() ? $client->activeMembers()->count() : 1);
-            $price = $client->plan->rates->where('headcount', '<=', $people)->sortByDesc('headcount')->first()?->unit_price
-                ?? $client->plan->rates->where('headcount', 1)->min('unit_price');
-            $singleRate = $price !== null ? GstCalculator::totalWithGst((float) $price * $people, $trainer->effectiveGstRate()) : null;
-        }
+        $balance = $client->balance();
+        $gstRate = $trainer->effectiveGstRate();
 
         $base = [
             'client' => $client,
             'trainer' => $trainer,
-            'balance' => $client->balance(),
-            'singleRate' => $singleRate,
+            'balance' => $balance,
+            // A family's session costs one fare per member, so this prices the whole
+            // household — otherwise the estimate overstates their runway several times over.
+            'singleRate' => WalletOutlook::sessionCost($client, $gstRate),
+            'sessionsLeft' => WalletOutlook::sessionsRemaining($client, $balance, $gstRate),
+            'invoices' => $client->invoices()
+                ->withoutGlobalScope(TrainerScope::class)
+                ->outstanding()
+                ->withPaidAmount()
+                ->get()
+                ->sortBy([['issued_on', 'asc'], ['id', 'asc']])
+                ->values(),
             'view' => $view,
             'token' => $token,
         ];

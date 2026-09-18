@@ -66,6 +66,11 @@ class Client extends Model
         return $this->hasMany(SessionAttendee::class);
     }
 
+    public function invoices(): HasMany
+    {
+        return $this->hasMany(Invoice::class)->latest('issued_on')->latest('id');
+    }
+
     public function trainingSessions(): BelongsToMany
     {
         return $this->belongsToMany(TrainingSession::class, 'session_attendees')

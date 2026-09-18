@@ -7,6 +7,7 @@ use App\Enums\TransactionType;
 use App\Exceptions\BillingException;
 use App\Exceptions\PaymentMethodNotAcceptedException;
 use App\Models\Client;
+use App\Models\Invoice;
 use App\Models\WalletTransaction;
 use App\Services\GstCalculator;
 use Carbon\CarbonInterface;
@@ -24,9 +25,14 @@ class RecordPayment
         CarbonInterface|string|null $receivedOn = null,
         ?string $reference = null,
         ?string $description = null,
+        ?Invoice $invoice = null,
     ): WalletTransaction {
         if ($amount <= 0) {
             throw new BillingException('Payment amount must be greater than zero.');
+        }
+
+        if ($invoice && (int) $invoice->client_id !== (int) $client->id) {
+            throw new BillingException('That payment request belongs to a different client.');
         }
 
         $client->loadMissing('trainer');
@@ -47,8 +53,17 @@ class RecordPayment
             'gst_amount' => $gst,
             'payment_method' => $method,
             'reference' => $reference ?: null,
+            'invoice_id' => $invoice?->id,
             'transacted_on' => $receivedOn ? (is_string($receivedOn) ? $receivedOn : $receivedOn->toDateString()) : today()->toDateString(),
-            'description' => $description ?: ($client->isOnWalletPlan() ? 'Fitness Wallet deposit' : 'Payment'),
+            'description' => $this->describe($client, $description, $invoice),
         ]);
+    }
+
+    /** Names the request the money answers, so the ledger row says what it was for. */
+    private function describe(Client $client, ?string $description, ?Invoice $invoice): string
+    {
+        $base = $description ?: ($client->isOnWalletPlan() ? 'Fitness Wallet deposit' : 'Payment');
+
+        return $invoice ? "{$base} — {$invoice->number}" : $base;
     }
 }

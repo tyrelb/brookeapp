@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Client;
+use App\Models\Invoice;
 use App\Models\Plan;
 use App\Models\Scopes\TrainerScope;
 use App\Models\Service;
@@ -19,6 +20,7 @@ it('hides other trainers\' clients, plans, services, sessions and transactions',
     $serviceB = Service::factory()->create(['user_id' => $this->trainerB->id]);
     $sessionB = TrainingSession::factory()->create(['user_id' => $this->trainerB->id, 'service_id' => $serviceB->id]);
     $txB = WalletTransaction::factory()->create(['user_id' => $this->trainerB->id, 'client_id' => $clientB->id]);
+    $invoiceB = Invoice::factory()->create(['user_id' => $this->trainerB->id, 'client_id' => $clientB->id]);
 
     $this->actingAs($this->trainerA);
 
@@ -27,6 +29,8 @@ it('hides other trainers\' clients, plans, services, sessions and transactions',
         ->and(Service::count())->toBe(0)
         ->and(TrainingSession::count())->toBe(0)
         ->and(WalletTransaction::count())->toBe(0)
+        ->and(Invoice::count())->toBe(0)
+        ->and(Invoice::find($invoiceB->id))->toBeNull()
         ->and(Client::find($clientB->id))->toBeNull()
         ->and(Plan::find($planB->id))->toBeNull()
         ->and(Service::find($serviceB->id))->toBeNull()

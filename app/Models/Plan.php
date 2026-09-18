@@ -26,6 +26,7 @@ class Plan extends Model
         'type',
         'monthly_fee',
         'billing_day',
+        'package_sessions',
         'description',
         'active',
     ];
@@ -36,6 +37,7 @@ class Plan extends Model
             'type' => PlanType::class,
             'monthly_fee' => 'decimal:2',
             'billing_day' => 'integer',
+            'package_sessions' => 'integer',
             'active' => 'boolean',
         ];
     }
@@ -84,6 +86,44 @@ class Plan extends Model
             ->where('headcount', '<=', $headcount)
             ->sortByDesc('headcount')
             ->first();
+    }
+
+    /**
+     * The service a plan is really about, when it prices more than one: the lowest id,
+     * which is the earliest one the trainer set up. Used to price a package and to
+     * judge how many sessions a wallet has left, both of which need one answer rather
+     * than whichever rate row the database happened to return first.
+     */
+    public function mainServiceId(): ?int
+    {
+        $id = $this->rates->min('service_id');
+
+        return $id === null ? null : (int) $id;
+    }
+
+    /** What one session costs a single person on this plan, before GST. */
+    public function packageUnitPrice(): ?float
+    {
+        $serviceId = $this->mainServiceId();
+
+        $price = $serviceId === null
+            ? null
+            : $this->rateFor($serviceId, 1)?->unit_price;
+
+        $price ??= $this->rates->where('headcount', 1)->min('unit_price');
+
+        return $price === null ? null : (float) $price;
+    }
+
+    /**
+     * What the whole package is worth before GST, when the plan is sold as one.
+     * Null when the trainer has not said how many sessions a package holds.
+     */
+    public function packageValue(): ?float
+    {
+        $unit = $this->package_sessions ? $this->packageUnitPrice() : null;
+
+        return $unit === null ? null : round($this->package_sessions * $unit, 2);
     }
 
     /**

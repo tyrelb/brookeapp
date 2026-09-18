@@ -148,6 +148,7 @@ it('manages services and plans with rate grids', function () {
     Livewire::test(Plans\Form::class)
         ->set('name', 'Standard')
         ->set('type', 'wallet')
+        ->set('package_sessions', '20')
         ->set("rates.{$service->id}.1", '60')
         ->set("rates.{$service->id}.2", '30')
         ->call('save')
@@ -155,9 +156,11 @@ it('manages services and plans with rate grids', function () {
 
     $plan = Plan::first();
     expect($plan->rates)->toHaveCount(2)
-        ->and((float) $plan->rateFor($service, 2)->unit_price)->toBe(30.00);
+        ->and((float) $plan->rateFor($service, 2)->unit_price)->toBe(30.00)
+        ->and($plan->package_sessions)->toBe(20)
+        ->and($plan->packageValue())->toBe(1200.00);
 
-    // Switching to monthly clears the rates.
+    // Switching to monthly clears the rates and the package size with them.
     Livewire::test(Plans\Form::class, ['plan' => $plan])
         ->set('type', 'monthly')
         ->set('monthly_fee', '250')
@@ -166,7 +169,8 @@ it('manages services and plans with rate grids', function () {
         ->assertHasNoErrors();
 
     expect($plan->fresh()->rates)->toHaveCount(0)
-        ->and((float) $plan->fresh()->monthly_fee)->toBe(250.00);
+        ->and((float) $plan->fresh()->monthly_fee)->toBe(250.00)
+        ->and($plan->fresh()->package_sessions)->toBeNull();
 
     // Monthly plan requires a fee.
     Livewire::test(Plans\Form::class)
