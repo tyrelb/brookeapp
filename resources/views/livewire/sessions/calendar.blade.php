@@ -1,5 +1,23 @@
-<div class="space-y-4">
-    <x-page-header title="Calendar" :subtitle="$title">
+<div class="space-y-3 max-sm:-mt-3 sm:space-y-4">
+    {{-- On a phone the page header's rows of buttons shrink to one compact toolbar. --}}
+    <div class="space-y-2 sm:hidden">
+        <div class="flex items-center gap-2">
+            <flux:heading size="lg" level="1" class="min-w-0 flex-1 truncate">{{ $shortTitle }}</flux:heading>
+            <flux:button.group>
+                <flux:button size="sm" icon="chevron-left" wire:click="previous" aria-label="Previous" />
+                <flux:button size="sm" wire:click="today">Today</flux:button>
+                <flux:button size="sm" icon="chevron-right" wire:click="next" aria-label="Next" />
+            </flux:button.group>
+            <flux:button size="sm" variant="primary" icon="plus" :href="route('sessions.book', ['date' => $date])" wire:navigate aria-label="Book session" />
+        </div>
+        <flux:button.group class="w-full">
+            @foreach (['list' => 'List', 'day' => 'Day', 'week' => 'Week', 'month' => 'Month'] as $key => $label)
+                <flux:button size="sm" class="flex-1" :variant="$view === $key ? 'primary' : 'outline'" wire:click="setView('{{ $key }}')">{{ $label }}</flux:button>
+            @endforeach
+        </flux:button.group>
+    </div>
+
+    <x-page-header title="Calendar" :subtitle="$title" class="max-sm:hidden">
         <x-slot:actions>
             <flux:button.group>
                 <flux:button icon="chevron-left" wire:click="previous" />
@@ -12,7 +30,7 @@
                 <flux:button :variant="$view === 'month' ? 'primary' : 'outline'" wire:click="setView('month')">Month</flux:button>
                 <flux:button :variant="$view === 'list' ? 'primary' : 'outline'" wire:click="setView('list')">List</flux:button>
             </flux:button.group>
-            <flux:button :href="route('sessions.book', ['date' => $date])" icon="calendar" variant="primary" wire:navigate>Book<span class="max-sm:hidden">&nbsp;session</span></flux:button>
+            <flux:button :href="route('sessions.book', ['date' => $date])" icon="calendar" variant="primary" wire:navigate>Book session</flux:button>
         </x-slot:actions>
     </x-page-header>
 
@@ -26,19 +44,19 @@
 
     @if ($view === 'list')
         {{-- A phone's agenda: the days ahead that have something booked, each session a row to tap. --}}
-        <div class="overflow-hidden rounded-xl border border-zinc-200 bg-white dark:border-zinc-700 dark:bg-zinc-900">
+        <div class="overflow-hidden border-y border-zinc-200 bg-white max-sm:-mx-6 sm:rounded-xl sm:border-x dark:border-zinc-700 dark:bg-zinc-900">
             @foreach ($listDays as $day)
                 @php($key = $day->toDateString())
                 @php($daySessions = $sessions->get($key, collect()))
                 <section wire:key="ld-{{ $key }}" class="border-b border-zinc-200 last:border-b-0 dark:border-zinc-700">
-                    <h3 class="flex items-center gap-2 border-b border-zinc-100 bg-zinc-50 px-4 py-2 text-sm font-semibold dark:border-zinc-800 dark:bg-zinc-800/60 {{ $key === $today ? 'text-[var(--color-accent-content)]' : 'text-zinc-700 dark:text-zinc-200' }}">
+                    <h3 class="flex items-center gap-2 border-b border-zinc-100 bg-zinc-50 px-4 py-1.5 text-[13px] font-semibold dark:border-zinc-800 dark:bg-zinc-800/60 {{ $key === $today ? 'text-[var(--color-accent-content)]' : 'text-zinc-700 dark:text-zinc-200' }}">
                         {{ $day->format('l') }} – {{ $day->format('M j') }}
                         @if ($key === $today)
                             <flux:badge size="sm" color="purple">Today</flux:badge>
                         @endif
                     </h3>
                     @if ($daySessions->isEmpty())
-                        <p class="px-4 py-3 text-sm text-zinc-500">
+                        <p class="px-4 py-2.5 text-sm text-zinc-500">
                             Nothing booked today.
                             <a href="{{ route('sessions.book', ['date' => $key]) }}" wire:navigate class="font-medium text-[var(--color-accent)] hover:underline">Book a session</a>
                         </p>
@@ -49,31 +67,37 @@
                             @php($unlogged = $session->isScheduled() && $session->endsAt()->isPast())
                             <li wire:key="ls-{{ $session->id }}">
                                 <button type="button" x-on:click="$flux.modal('session-sheet').show(); $wire.dispatch('open-session', { id: {{ $session->id }} })"
-                                        class="flex min-h-16 w-full items-stretch gap-3 px-4 py-3 text-left hover:bg-zinc-50 active:bg-zinc-100 dark:hover:bg-zinc-800/50 dark:active:bg-zinc-800">
+                                        class="flex w-full items-stretch gap-3 px-4 py-2.5 text-left hover:bg-zinc-50 active:bg-zinc-100 dark:hover:bg-zinc-800/50 dark:active:bg-zinc-800">
                                     <span class="w-1 shrink-0 rounded-full {{ match ($session->status->value) {
                                         'completed' => 'bg-green-500',
                                         'cancelled' => 'bg-zinc-300 dark:bg-zinc-600',
                                         default => 'bg-[var(--color-accent)]',
                                     } }}"></span>
                                     <span class="min-w-0 flex-1">
-                                        <span class="block truncate font-semibold {{ $session->isCancelled() ? 'text-zinc-400 line-through' : 'text-zinc-900 dark:text-zinc-50' }}">
+                                        <span class="block truncate leading-6 font-semibold {{ $session->isCancelled() ? 'text-zinc-400 line-through' : 'text-zinc-900 dark:text-zinc-50' }}">
                                             @if ($clash)<span class="text-amber-600 dark:text-amber-400" title="Overlaps another session">⚠</span>@endif
                                             {{ $session->displayName() }}
                                         </span>
-                                        <span class="mt-0.5 flex items-center gap-1 text-sm text-zinc-500">
-                                            <flux:icon.map-pin variant="micro" class="shrink-0" />
-                                            <span class="truncate">{{ $session->gym ? $session->gym->name.' · ' : '' }}{{ $session->service->name }}</span>
+                                        <span class="flex items-center gap-1 text-sm leading-5 text-zinc-500">
+                                            @if ($session->gym)
+                                                <flux:icon.map-pin variant="micro" class="shrink-0" />
+                                                <span class="truncate">{{ $session->gym->name }}</span>
+                                            @else
+                                                <span class="truncate">{{ $session->service->name }}</span>
+                                            @endif
                                             @if ($session->isInSeries())<span class="shrink-0" title="Repeats">↻</span>@endif
+                                            @if ($unlogged)
+                                                <span class="shrink-0 font-medium text-amber-700 dark:text-amber-400">· Not logged</span>
+                                            @elseif ($session->isCompleted())
+                                                <flux:icon.check variant="micro" class="shrink-0 text-green-600 dark:text-green-400" /><span class="sr-only">Logged</span>
+                                            @elseif ($session->isCancelled())
+                                                <span class="shrink-0">· Cancelled</span>
+                                            @endif
                                         </span>
-                                        @if ($unlogged)
-                                            <span class="mt-0.5 block text-xs font-medium text-amber-700 dark:text-amber-400">Not logged yet</span>
-                                        @elseif (! $session->isScheduled())
-                                            <span class="mt-0.5 block text-xs {{ $session->isCompleted() ? 'text-green-700 dark:text-green-400' : 'text-zinc-400' }}">{{ $session->status->label() }}</span>
-                                        @endif
                                     </span>
-                                    <span class="shrink-0 text-right text-sm leading-6 tabular-nums">
-                                        <span class="block font-medium text-zinc-900 dark:text-zinc-100">{{ $session->starts_at->format('g:i a') }}</span>
-                                        <span class="block text-zinc-500">{{ $session->endsAt()->format('g:i a') }}</span>
+                                    <span class="shrink-0 text-right text-sm tabular-nums">
+                                        <span class="block leading-6 font-medium text-zinc-900 dark:text-zinc-100">{{ $session->starts_at->format('g:i a') }}</span>
+                                        <span class="block leading-5 text-zinc-500">{{ $session->endsAt()->format('g:i a') }}</span>
                                     </span>
                                 </button>
                             </li>
@@ -89,7 +113,7 @@
                 </p>
             @endif
 
-            <div class="border-t border-zinc-200 px-4 py-3 text-center dark:border-zinc-700">
+            <div class="border-t border-zinc-200 px-4 py-2 text-center dark:border-zinc-700">
                 @if ($canShowMore)
                     <flux:button variant="ghost" size="sm" icon="chevron-down" wire:click="showMore">Show 2 more weeks</flux:button>
                 @else
@@ -259,7 +283,8 @@
         </div>
     @endif
 
-    <div class="flex flex-wrap gap-4 text-xs text-zinc-500">
+    {{-- On a phone the list speaks for itself; the legend would only push it down. --}}
+    <div @class(['flex flex-wrap gap-4 text-xs text-zinc-500', 'max-sm:hidden' => $view === 'list'])>
         <span><span class="inline-block size-2.5 rounded-sm bg-[var(--color-accent)]/30 align-middle"></span> Scheduled</span>
         <span><span class="inline-block size-2.5 rounded-sm bg-green-200 align-middle"></span> Completed</span>
         <span><span class="inline-block size-2.5 rounded-sm bg-zinc-200 align-middle"></span> Cancelled</span>

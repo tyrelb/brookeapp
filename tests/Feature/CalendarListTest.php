@@ -95,9 +95,9 @@ it('lists two weeks of sessions under day headings, skipping empty days', functi
     Livewire::test(Calendar::class, ['date' => '2026-09-15', 'view' => 'list'])
         ->assertSee('Sep 15 – Sep 28, 2026')
         ->assertSeeInOrder([
-            'Tuesday – Sep 15', 'Ava Nguyen', 'Not logged yet', '7:00 am', '8:00 am',
+            'Tuesday – Sep 15', 'Ava Nguyen', 'Not logged', '7:00 am', '8:00 am',
             'Wednesday – Sep 16', 'Ben Okafor', 'Cancelled',
-            'Thursday – Sep 17', 'Ava Nguyen and Ben Okafor', 'Completed',
+            'Thursday – Sep 17', 'Ava Nguyen and Ben Okafor', 'Logged',
             'Monday – Sep 28', 'Ben Okafor', '6:00 pm',
         ])
         ->assertDontSee('Friday – Sep 18')

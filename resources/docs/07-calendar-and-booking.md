@@ -22,7 +22,7 @@ Day and Week open at 7 am, or earlier if a session starts before then; scroll th
 
 ## The calendar on your phone
 
-On a phone, the calendar opens in **List** view: the next two weeks as an agenda, one heading per day that has something booked. Each row shows who, where, and the start and end time. Today is always listed, even when it is empty. Tap **Show 2 more weeks** at the bottom to see further ahead; the arrows move two weeks at a time. A session that has finished but hasn't been logged is marked **Not logged yet**. List view works on a computer too: click **List**.
+On a phone, the calendar opens in **List** view: the next two weeks as an agenda, one heading per day that has something booked. Each row shows who, where, and the start and end time. Today is always listed, even when it is empty. Tap **Show 2 more weeks** at the bottom to see further ahead; the arrows move two weeks at a time. A session that has finished but hasn't been logged is marked **Not logged**. List view works on a computer too: click **List**.
 
 ![The List view on a phone](/images/docs/calendar-list-phone.png)
 *On a phone the calendar opens as a list of the days ahead.*

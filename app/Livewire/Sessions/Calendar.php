@@ -127,6 +127,13 @@ class Calendar extends Component
             $title = $anchor->format('F Y');
         }
 
+        // A phone's toolbar shares one row with the arrows, so it drops the weekday and year.
+        $shortTitle = match ($this->view) {
+            'day' => $anchor->format('D, M j'),
+            'month' => $anchor->format($anchor->year === today()->year ? 'F' : 'M Y'),
+            default => $start->format('M j').' – '.$end->format($start->month === $end->month ? 'j' : 'M j'),
+        };
+
         // A day either side of the visible range so a session that runs late still
         // clashes with the one it overlaps into.
         $loaded = TrainingSession::query()
@@ -156,6 +163,7 @@ class Calendar extends Component
 
         return view('livewire.sessions.calendar', [
             'title' => $title,
+            'shortTitle' => $shortTitle,
             'days' => $days,
             'sessions' => $sessions,
             'conflicts' => $conflicts,
