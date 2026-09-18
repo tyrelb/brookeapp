@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 36 36" width="36" height="36">
+    <!-- The app's logo badge (x-app-logo): the dumbbell from x-app-logo-icon on the accent-content
+         purple, at the same proportions as the sidebar (a 20px icon in a 32px badge). Emails need
+         it as a PNG, because Gmail and Outlook drop inline SVG; rebuild with:
+         rsvg-convert -w 108 -h 108 resources/images/email-logo.svg -o public/images/email/logo.png -->
+    <rect width="36" height="36" rx="7" fill="#5d42b3" />
+    <g transform="translate(6.75 6.75) scale(0.9375)">
+        <path fill="#ffffff" d="M2 10h2v4H2zM4 8h2.5v8H4zM17.5 8H20v8h-2.5zM20 10h2v4h-2zM6.5 11h11v2h-11z" />
+    </g>
+</svg>
