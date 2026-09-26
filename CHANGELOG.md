@@ -1,5 +1,18 @@
 # Changelog
 
+## Unreleased
+
+Open-sourced under the GNU AGPL v3 (or later), with a security pass first.
+
+- A suspended trainer, or an administrator whose access was removed, is stopped at their next click, not their next page load. Suspended accounts can no longer log in at all.
+- `REGISTRATION_ENABLED=false` closes trainer sign-ups on a private install. Sign-ups and verification-email resends are rate limited.
+- Links and images typed into business settings, invoice messages or notes arrive in client emails as plain text, so they cannot hide a link.
+- Security headers on every page. The client wallet page is never cached, indexed or sent as a referrer.
+- The demo seeder refuses to run in production, destructive database commands are blocked there, and production passwords are checked against known breaches.
+- Gym statement and annual report CSVs neutralise spreadsheet formulas in names, and calendar invites quote names that contain punctuation.
+- A session can only be moved to one of the trainer's own gyms.
+- README rewritten for self-hosting (nginx, PHP-FPM, MySQL, Supervisor, cron). Added LICENSE and SECURITY.md. CI runs Pest and fails on style issues.
+
 ## 1.0.0 — September 18, 2026
 
 First production release.

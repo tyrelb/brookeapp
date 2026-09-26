@@ -1,13 +1,30 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/livewire-starter-kit",
+    "name": "tyrelb/brookeapp",
     "type": "project",
-    "description": "The official Laravel starter kit for Livewire.",
+    "description": "Billing and Fitness Wallet tracking for personal trainers: clients, sessions, invoices, GST and gym usage.",
     "keywords": [
         "laravel",
-        "framework"
+        "livewire",
+        "personal-trainer",
+        "billing",
+        "invoicing",
+        "gst"
     ],
-    "license": "MIT",
+    "license": "AGPL-3.0-or-later",
+    "authors": [
+        {
+            "name": "Tyrel Burton",
+            "email": "tb@tyrel.ca",
+            "role": "Maintainer"
+        }
+    ],
+    "homepage": "https://github.com/tyrelb/brookeapp",
+    "support": {
+        "issues": "https://github.com/tyrelb/brookeapp/issues",
+        "source": "https://github.com/tyrelb/brookeapp",
+        "security": "https://github.com/tyrelb/brookeapp/blob/HEAD/SECURITY.md"
+    },
     "require": {
         "php": "^8.5",
         "laravel/framework": "^13.0",
