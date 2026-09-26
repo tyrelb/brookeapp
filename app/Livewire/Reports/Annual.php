@@ -40,7 +40,7 @@ class Annual extends Component
         return response()->streamDownload(function () use ($report, $business) {
             $out = fopen('php://output', 'w');
 
-            fputcsv($out, ["{$business} — annual report {$report['year']}"]);
+            fputcsv($out, [csv_text("{$business} — annual report {$report['year']}")]);
             fputcsv($out, ['Generated', now()->toDateTimeString()]);
             fputcsv($out, []);
 

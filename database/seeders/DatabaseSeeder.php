@@ -28,6 +28,13 @@ class DatabaseSeeder extends Seeder
 {
     public function run(): void
     {
+        // Every account below has the password "password", including an administrator.
+        if (app()->isProduction()) {
+            $this->command?->error('Refusing to seed demo accounts in production.');
+
+            return;
+        }
+
         $brooke = User::factory()->create([
             'name' => 'Brooke',
             'email' => 'brooke@example.com',

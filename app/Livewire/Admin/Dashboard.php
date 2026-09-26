@@ -10,9 +10,10 @@ use Livewire\Component;
 #[Title('Admin overview')]
 class Dashboard extends Component
 {
-    public function mount(): void
+    /** Runs on every request, not only the first: an admin demoted mid-session loses access at once. */
+    public function boot(): void
     {
-        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless(auth()->user()?->isAdmin(), 403);
     }
 
     public function render(PlatformStats $stats)

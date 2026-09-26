@@ -10,7 +10,7 @@ use App\Models\SessionAttendee;
 use App\Services\WalletOutlook;
 use Carbon\CarbonImmutable;
 use Illuminate\Http\Request;
-use Illuminate\View\View;
+use Illuminate\Http\Response;
 
 /**
  * The client's read-only Fitness Wallet page, opened from a magic link.
@@ -22,7 +22,7 @@ use Illuminate\View\View;
  */
 class WalletController extends Controller
 {
-    public function show(Request $request, string $token): View
+    public function show(Request $request, string $token): Response
     {
         $client = Client::withoutGlobalScope(TrainerScope::class)
             ->with(['plan.rates', 'trainer', 'activeMembers'])
@@ -65,7 +65,14 @@ class WalletController extends Controller
             'token' => $token,
         ];
 
-        return view('portal.wallet', $base + ($view === 'calendar' ? $this->calendarData($client, $request) : $this->listData($client, $request)));
+        // The URL is the credential: keep it out of search engines, shared caches and Referer headers.
+        return response()
+            ->view('portal.wallet', $base + ($view === 'calendar' ? $this->calendarData($client, $request) : $this->listData($client, $request)))
+            ->withHeaders([
+                'X-Robots-Tag' => 'noindex, nofollow',
+                'Referrer-Policy' => 'no-referrer',
+                'Cache-Control' => 'no-store, private',
+            ]);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 use App\Livewire\Actions\Logout;
 use Illuminate\Support\Facades\Auth;
+use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\Facades\Session;
 use Livewire\Attributes\Layout;
 use Livewire\Volt\Component;
@@ -18,9 +19,12 @@ new #[Layout('components.layouts.auth')] class extends Component {
             return;
         }
 
-        Auth::user()->sendEmailVerificationNotification();
+        // Three resends per ten minutes, so the button cannot be used to flood an inbox.
+        $sent = RateLimiter::attempt('verify-email:'.Auth::id(), 3, function () {
+            Auth::user()->sendEmailVerificationNotification();
+        }, 600);
 
-        Session::flash('status', 'verification-link-sent');
+        Session::flash('status', $sent ? 'verification-link-sent' : 'verification-throttled');
     }
 
     /**
@@ -42,6 +46,10 @@ new #[Layout('components.layouts.auth')] class extends Component {
     @if (session('status') == 'verification-link-sent')
         <div class="font-medium text-center text-sm text-green-600">
             {{ __('A new verification link has been sent to the email address you provided during registration.') }}
+        </div>
+    @elseif (session('status') == 'verification-throttled')
+        <div class="font-medium text-center text-sm text-amber-600">
+            {{ __('A link was sent a moment ago. Please check your inbox, or wait a few minutes before asking again.') }}
         </div>
     @endif
 

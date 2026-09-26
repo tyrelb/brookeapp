@@ -39,9 +39,6 @@ class User extends Authenticatable implements MustVerifyEmail
         'notify_on_booking',
         'notify_on_completion',
         'timezone',
-        'is_admin',
-        'suspended_at',
-        'last_login_at',
     ];
 
     /**

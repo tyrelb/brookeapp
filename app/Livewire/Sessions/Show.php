@@ -235,6 +235,8 @@ class Show extends Component
             return;
         }
 
+        // Validate the value that is saved, not whatever the bound property happens to hold.
+        $this->newGymId = $gymId;
         $this->validate(['newGymId' => ['nullable', Rule::exists('gyms', 'id')->where('user_id', auth()->id())]]);
         $this->trainingSession->update(['gym_id' => $gymId !== '' ? (int) $gymId : null]);
         Flux::toast('Gym updated.', variant: 'success');

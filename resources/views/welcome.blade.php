@@ -25,7 +25,9 @@
                         <flux:button :href="route('dashboard')" variant="primary" class="w-full sm:w-auto">Go to dashboard</flux:button>
                     @else
                         <flux:button :href="route('login')" variant="primary" class="w-full sm:w-auto">Log in</flux:button>
-                        <flux:button :href="route('register')" class="w-full sm:w-auto">Register</flux:button>
+                        @if (config('auth.registration_enabled'))
+                            <flux:button :href="route('register')" class="w-full sm:w-auto">Register</flux:button>
+                        @endif
                     @endauth
                 </div>
             </div>

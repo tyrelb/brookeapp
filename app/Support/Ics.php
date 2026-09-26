@@ -75,8 +75,8 @@ class Ics
             'DTEND:'.$session->endsAt()->utc()->format('Ymd\THis\Z'),
             'SUMMARY:'.self::escape($summary),
             'DESCRIPTION:'.self::escape($description),
-            'ORGANIZER;CN='.self::escape($trainer->displayName()).':mailto:'.$trainer->email,
-            'ATTENDEE;CN='.self::escape($client->full_name).';ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:'.$client->email,
+            'ORGANIZER;CN='.self::param($trainer->displayName()).':mailto:'.$trainer->email,
+            'ATTENDEE;CN='.self::param($client->full_name).';ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:'.$client->email,
             'STATUS:'.($method === self::METHOD_CANCEL ? 'CANCELLED' : 'CONFIRMED'),
             'TRANSP:OPAQUE',
             'END:VEVENT',
@@ -87,10 +87,19 @@ class Ics
     public static function escape(string $text): string
     {
         return str_replace(
-            ['\\', ';', ',', "\r\n", "\n"],
-            ['\\\\', '\;', '\,', '\n', '\n'],
+            ['\\', ';', ',', "\r\n", "\n", "\r"],
+            ['\\\\', '\;', '\,', '\n', '\n', ''],
             $text,
         );
+    }
+
+    /**
+     * Quote a parameter value such as CN (RFC 5545 §3.1): a name containing ':' or ';'
+     * would otherwise end the parameter early. Quotes and control characters are not allowed inside.
+     */
+    public static function param(string $text): string
+    {
+        return '"'.preg_replace('/[\x00-\x1F\x7F"]/', '', $text).'"';
     }
 
     /** Fold lines longer than 75 octets (RFC 5545 §3.1). */

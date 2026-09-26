@@ -16,9 +16,14 @@ class Show extends Component
 {
     public User $user;
 
+    /** Runs on every request, not only the first: an admin demoted mid-session loses access at once. */
+    public function boot(): void
+    {
+        abort_unless(auth()->user()?->isAdmin(), 403);
+    }
+
     public function mount(User $user): void
     {
-        abort_unless(auth()->user()->isAdmin(), 403);
         $this->user = $user;
     }
 

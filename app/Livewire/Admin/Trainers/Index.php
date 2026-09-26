@@ -20,9 +20,10 @@ class Index extends Component
     #[Url]
     public string $filter = ''; // '' | unverified | suspended | admins
 
-    public function mount(): void
+    /** Runs on every request, not only the first: an admin demoted mid-session loses access at once. */
+    public function boot(): void
     {
-        abort_unless(auth()->user()->isAdmin(), 403);
+        abort_unless(auth()->user()?->isAdmin(), 403);
     }
 
     public function updatedSearch(): void

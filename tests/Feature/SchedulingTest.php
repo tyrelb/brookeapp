@@ -151,8 +151,8 @@ it('renders invite emails with a valid ics attachment', function () {
         ->toContain('DTSTART:20260910T160000Z') // 09:00 Pacific (PDT) = 16:00 UTC
         ->toContain('DTEND:20260910T170000Z')
         ->toContain('SUMMARY:Personal Training with Brooke Fitness')
-        ->toContain('ATTENDEE;CN=Ava Nguyen;ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:ava@example.com')
-        ->toContain('ORGANIZER;CN=Brooke Fitness:mailto:brooke@example.com')
+        ->toContain('ATTENDEE;CN="Ava Nguyen";ROLE=REQ-PARTICIPANT;RSVP=TRUE:mailto:ava@example.com')
+        ->toContain('ORGANIZER;CN="Brooke Fitness":mailto:brooke@example.com')
         ->toContain('STATUS:CONFIRMED');
 
     foreach (explode("\r\n", $ics) as $line) {

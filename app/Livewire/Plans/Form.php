@@ -63,6 +63,8 @@ class Form extends Component
 
     public function save(): void
     {
+        $this->plan ? $this->authorize('update', $this->plan) : $this->authorize('create', Plan::class);
+
         $isMonthly = $this->type === PlanType::Monthly->value;
 
         $data = $this->validate([

@@ -114,4 +114,16 @@ return [
 
     'password_timeout' => env('AUTH_PASSWORD_TIMEOUT', 10800),
 
+    /*
+    |--------------------------------------------------------------------------
+    | Registration
+    |--------------------------------------------------------------------------
+    |
+    | Whether new trainers can sign up. A private install can close sign-ups
+    | once its own accounts exist; existing trainers can still log in.
+    |
+    */
+
+    'registration_enabled' => (bool) env('REGISTRATION_ENABLED', true),
+
 ];

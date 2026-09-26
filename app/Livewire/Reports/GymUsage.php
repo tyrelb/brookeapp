@@ -120,7 +120,7 @@ class GymUsage extends Component
 
         return response()->streamDownload(function () use ($report, $summary, $gym, $business) {
             $out = fopen('php://output', 'w');
-            fputcsv($out, ["{$business} — gym usage at {$gym->name}, {$report['label']}"]);
+            fputcsv($out, [csv_text("{$business} — gym usage at {$gym->name}, {$report['label']}")]);
             fputcsv($out, ['Status', $this->finalized($gym) ? 'Finalized' : 'Draft']);
             fputcsv($out, []);
             fputcsv($out, ['Date', 'Time', 'Service', 'Attendees', '# of people', 'Minutes', 'Rate per hour', '$ for the session', 'Included']);
@@ -131,8 +131,8 @@ class GymUsage extends Component
                 fputcsv($out, [
                     $row['date'],
                     Carbon::createFromFormat('H:i', $row['time'])->format('g:i a'),
-                    $row['service'],
-                    implode(', ', $row['attendees']),
+                    csv_text($row['service']),
+                    csv_text(implode(', ', $row['attendees'])),
                     $row['people'],
                     $row['minutes'] ?? '',
                     $row['rate'] === null ? '' : number_format($row['rate'], 2, '.', ''),
@@ -166,8 +166,8 @@ class GymUsage extends Component
                     fputcsv($out, [
                         $row['date'],
                         Carbon::createFromFormat('H:i', $row['time'])->format('g:i a'),
-                        $row['service'],
-                        implode(', ', $row['names']),
+                        csv_text($row['service']),
+                        csv_text(implode(', ', $row['names'])),
                         $row['people'],
                         number_format($row['subtotal'], 2, '.', ''),
                         $row['billable'] ? 'yes' : 'no',

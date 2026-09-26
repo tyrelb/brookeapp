@@ -1,5 +1,7 @@
 <?php
 
+use App\Support\PlainTextLinks;
+
 return [
 
     /*
@@ -113,6 +115,28 @@ return [
     'from' => [
         'address' => env('MAIL_FROM_ADDRESS', 'hello@example.com'),
         'name' => env('MAIL_FROM_NAME', env('APP_NAME', 'Laravel')),
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Markdown Mail Settings
+    |--------------------------------------------------------------------------
+    |
+    | PlainTextLinks renders Markdown links and images in client emails as
+    | plain text, so trainer-written text cannot smuggle in a link.
+    |
+    */
+
+    'markdown' => [
+        'theme' => env('MAIL_MARKDOWN_THEME', 'default'),
+
+        'paths' => [
+            resource_path('views/vendor/mail'),
+        ],
+
+        'extensions' => [
+            PlainTextLinks::class,
+        ],
     ],
 
 ];

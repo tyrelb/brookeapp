@@ -31,7 +31,6 @@ class Client extends Model
         'status',
         'notes',
         'started_at',
-        'portal_token',
     ];
 
     protected function casts(): array
