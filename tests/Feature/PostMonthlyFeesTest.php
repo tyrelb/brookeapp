@@ -3,10 +3,12 @@
 use App\Actions\PostMonthlyFee;
 use App\Enums\TransactionType;
 use App\Exceptions\BillingException;
+use App\Livewire\Clients\Show;
 use App\Models\Client;
 use App\Models\Plan;
 use App\Models\User;
 use App\Models\WalletTransaction;
+use Livewire\Livewire;
 
 beforeEach(function () {
     $this->trainer = User::factory()->create(['gst_rate' => 5]);
@@ -67,4 +69,34 @@ it('the command respects billing day, skips inactive and wallet clients, and is 
     $this->artisan('billing:post-monthly-fees', ['--date' => '2026-10-05'])->assertSuccessful();
     expect(WalletTransaction::where('client_id', $joinedLate->id)->count())->toBe(1)
         ->and(WalletTransaction::where('client_id', $due->id)->count())->toBe(2);
+});
+
+it('posts a fee for a chosen month on a chosen date', function () {
+    $client = Client::factory()->create(['user_id' => $this->trainer->id, 'plan_id' => $this->monthly->id, 'started_at' => '2026-01-01']);
+
+    $fee = app(PostMonthlyFee::class)->handle($client, '2026-10-01', '2026-10-23');
+
+    expect($fee->billing_period)->toBe('2026-10')
+        ->and($fee->transacted_on->toDateString())->toBe('2026-10-23')
+        ->and($fee->description)->toBe('Monthly Unlimited — October 2026');
+});
+
+it('lets the trainer pick the month and date from the client page', function () {
+    $this->actingAs($this->trainer);
+    $client = Client::factory()->create(['user_id' => $this->trainer->id, 'plan_id' => $this->monthly->id, 'started_at' => '2026-01-01']);
+    app(PostMonthlyFee::class)->handle($client, '2026-09-01');
+
+    Livewire::test(Show::class, ['client' => $client])
+        ->set('feeMonth', '2026-09')
+        ->assertSet('feeDate', '2026-09-05')
+        ->call('postMonthlyFee')
+        ->assertHasErrors(['feeMonth'])
+        ->set('feeMonth', '2026-10')
+        ->assertSet('feeDate', '2026-10-05')
+        ->set('feeDate', '2026-10-23')
+        ->call('postMonthlyFee')
+        ->assertHasNoErrors();
+
+    $october = WalletTransaction::where('billing_period', '2026-10')->sole();
+    expect($october->transacted_on->toDateString())->toBe('2026-10-23');
 });

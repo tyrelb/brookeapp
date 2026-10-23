@@ -20,6 +20,7 @@ use App\Models\WalletTransactionRevision;
 use App\Services\GstCalculator;
 use App\Services\PaymentRequestSuggester;
 use App\Services\WalletOutlook;
+use Carbon\CarbonImmutable;
 use Flux\Flux;
 use Illuminate\Support\Collection;
 use Illuminate\Support\Facades\Mail;
@@ -65,6 +66,11 @@ class Show extends Component
 
     public string $adjustmentMethod = '';
 
+    // Post monthly fee modal
+    public string $feeMonth = ''; // YYYY-MM billing period
+
+    public string $feeDate = '';
+
     // Edit transaction modal
     public ?int $editingId = null;
 
@@ -93,6 +99,8 @@ class Show extends Component
         $this->adjustmentDate = today()->toDateString();
         $this->paymentMethod = auth()->user()->enabledPaymentMethods()[0]->value ?? '';
         $this->adjustmentMethod = $this->paymentMethod;
+        $this->feeMonth = today()->format('Y-m');
+        $this->feeDate = $this->billingDateFor($this->feeMonth);
 
         $this->requestIssuedOn = today()->toDateString();
         $this->requestDueOn = today()->addDays(7)->toDateString();
@@ -225,24 +233,83 @@ class Show extends Component
         Flux::toast('Adjustment posted.', variant: 'success');
     }
 
+    public function updatedFeeMonth(): void
+    {
+        // Picking a month moves the date to that month's billing day; it can still be changed.
+        if (preg_match('/^\d{4}-\d{2}$/', $this->feeMonth)) {
+            $this->feeDate = $this->billingDateFor($this->feeMonth);
+        }
+    }
+
     public function postMonthlyFee(PostMonthlyFee $postMonthlyFee): void
     {
         $this->authorize('update', $this->client);
 
+        $this->validate([
+            'feeMonth' => ['required', 'date_format:Y-m'],
+            'feeDate' => ['required', 'date'],
+        ]);
+
         try {
-            $transaction = $postMonthlyFee->handle($this->client, today());
+            $transaction = $postMonthlyFee->handle($this->client, $this->feeMonth.'-01', $this->feeDate);
         } catch (BillingException $e) {
-            Flux::toast($e->getMessage(), variant: 'danger');
+            $this->addError('feeMonth', $e->getMessage());
 
             return;
         }
 
-        Flux::toast(
-            $transaction->wasRecentlyCreated
-                ? "Posted {$transaction->description}."
-                : "This month's fee was already posted on {$transaction->transacted_on->format('M j')}.",
-            variant: $transaction->wasRecentlyCreated ? 'success' : 'warning',
-        );
+        if (! $transaction->wasRecentlyCreated) {
+            $month = CarbonImmutable::parse($this->feeMonth.'-01')->format('F Y');
+            $this->addError('feeMonth', "The {$month} fee was already posted on {$transaction->transacted_on->format('M j, Y')}.");
+
+            return;
+        }
+
+        Flux::modal('post-monthly-fee')->close();
+        Flux::toast("Posted {$transaction->description}.", variant: 'success');
+        $this->feeMonth = today()->format('Y-m');
+        $this->feeDate = $this->billingDateFor($this->feeMonth);
+    }
+
+    /**
+     * The plan's billing day in the given YYYY-MM month (clamped to short months).
+     */
+    private function billingDateFor(string $month): string
+    {
+        $start = CarbonImmutable::parse($month.'-01');
+        $day = min($this->client->plan?->billing_day ?: 1, $start->daysInMonth);
+
+        return $start->day($day)->toDateString();
+    }
+
+    /**
+     * Months the fee can be posted for, newest first, noting which are already posted.
+     *
+     * @return array<string, string> YYYY-MM => label
+     */
+    private function feeMonthOptions(): array
+    {
+        if (! $this->client->isOnMonthlyPlan()) {
+            return [];
+        }
+
+        $posted = $this->client->transactions()
+            ->ofType(TransactionType::MonthlyFee)
+            ->active()
+            ->whereNotNull('billing_period')
+            ->get(['billing_period', 'transacted_on'])
+            ->keyBy('billing_period');
+
+        $options = [];
+        $month = today()->toImmutable()->startOfMonth()->addMonths(2);
+
+        for ($i = 0; $i < 15; $i++, $month = $month->subMonth()) {
+            $key = $month->format('Y-m');
+            $options[$key] = $month->format('F Y')
+                .(isset($posted[$key]) ? ' — posted '.$posted[$key]->transacted_on->format('M j') : '');
+        }
+
+        return $options;
     }
 
     public function emailWalletLink(): void
@@ -475,6 +542,7 @@ class Show extends Component
             'requestTotals' => $this->requestTotals(),
             'sessionsLeft' => WalletOutlook::sessionsRemaining($this->client, $balance),
             'runningLow' => WalletOutlook::isRunningLow($this->client, $balance),
+            'feeMonthOptions' => $this->feeMonthOptions(),
         ])->title($this->client->full_name);
     }
 }
