@@ -20,7 +20,9 @@
                 <flux:button icon="adjustments-horizontal">Adjustment</flux:button>
             </flux:modal.trigger>
             @if ($client->isOnMonthlyPlan())
-                <flux:button icon="calendar" wire:click="postMonthlyFee" wire:confirm="Post this month's fee of {{ money($client->plan->monthly_fee) }} + GST to {{ $client->first_name }}'s account?">Post monthly fee</flux:button>
+                <flux:modal.trigger name="post-monthly-fee">
+                    <flux:button icon="calendar">Post monthly fee</flux:button>
+                </flux:modal.trigger>
             @endif
             <flux:button :href="route('sessions.log')" icon="plus" wire:navigate>Log session</flux:button>
             <flux:button :href="route('clients.edit', $client)" icon="pencil-square" wire:navigate>Edit</flux:button>
@@ -339,6 +341,27 @@
             </div>
         </form>
     </flux:modal>
+
+    @if ($client->isOnMonthlyPlan())
+        <flux:modal name="post-monthly-fee" class="md:w-[28rem]">
+            <form wire:submit="postMonthlyFee" class="space-y-5">
+                <div>
+                    <flux:heading size="lg">Post monthly fee</flux:heading>
+                    <flux:subheading>{{ money($client->plan->monthly_fee) }} + GST to {{ $client->first_name }}'s account.</flux:subheading>
+                </div>
+                <flux:select wire:model.live="feeMonth" label="Month">
+                    @foreach ($feeMonthOptions as $value => $label)
+                        <flux:select.option value="{{ $value }}">{{ $label }}</flux:select.option>
+                    @endforeach
+                </flux:select>
+                <flux:input wire:model="feeDate" label="Date" type="date" />
+                <div class="flex justify-end gap-2">
+                    <flux:modal.close><flux:button variant="ghost">Cancel</flux:button></flux:modal.close>
+                    <flux:button type="submit" variant="primary">Post fee</flux:button>
+                </div>
+            </form>
+        </flux:modal>
+    @endif
 
     <flux:modal name="edit-transaction" class="md:w-[30rem]">
         @if ($editing)

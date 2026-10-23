@@ -14,15 +14,17 @@ use Illuminate\Support\Facades\DB;
 /**
  * Posts one month's membership fee (plus GST) to a monthly client's ledger.
  * Idempotent per client and billing period: a second call returns the existing row.
+ * The fee is dated on the plan's billing day unless a posting date is given.
  */
 class PostMonthlyFee
 {
-    public function handle(Client $client, CarbonInterface|string|null $period = null): WalletTransaction
+    public function handle(Client $client, CarbonInterface|string|null $period = null, CarbonInterface|string|null $on = null): WalletTransaction
     {
         $period = CarbonImmutable::parse($period ?? today())->startOfMonth();
         $billingPeriod = $period->format('Y-m');
+        $on = $on !== null ? CarbonImmutable::parse($on) : null;
 
-        return DB::transaction(function () use ($client, $period, $billingPeriod) {
+        return DB::transaction(function () use ($client, $period, $billingPeriod, $on) {
             $client->loadMissing(['plan', 'trainer']);
             $plan = $client->plan;
 
@@ -54,7 +56,7 @@ class PostMonthlyFee
                 'amount' => -round($fee + $gst, 2),
                 'subtotal' => $fee,
                 'gst_amount' => $gst,
-                'transacted_on' => $period->day($billingDay)->toDateString(),
+                'transacted_on' => ($on ?? $period->day($billingDay))->toDateString(),
                 'billing_period' => $billingPeriod,
                 'description' => "{$plan->name} — {$period->format('F Y')}",
             ]);
