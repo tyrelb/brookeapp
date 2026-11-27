@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Enums\ClientStatus;
 use App\Enums\PlanType;
+use App\Exceptions\BillingException;
 use App\Models\Concerns\BelongsToTrainer;
 use Database\Factories\ClientFactory;
 use Illuminate\Database\Eloquent\Builder;
@@ -85,6 +86,39 @@ class Client extends Model
     public function isActive(): bool
     {
         return $this->status === ClientStatus::Active;
+    }
+
+    /**
+     * An inactive client is closed for new business: no payments, charges, payment
+     * requests or sessions until they are reactivated. Corrections to what is already
+     * on their record (edits, voids, reminders) are still allowed.
+     *
+     * @param  string  $doing  e.g. "recording a payment", finishing the sentence
+     *
+     * @throws BillingException
+     */
+    public function ensureActive(string $doing): void
+    {
+        if (! $this->isActive()) {
+            throw new BillingException("{$this->full_name} is inactive. Reactivate them before {$doing}.");
+        }
+    }
+
+    /**
+     * The same rule for a whole set of attendees, checked before anything is written.
+     *
+     * @param  iterable<int|string>  $clientIds
+     *
+     * @throws BillingException
+     */
+    public static function ensureAllActive(iterable $clientIds, string $doing): void
+    {
+        $ids = collect($clientIds)->map(fn ($id) => (int) $id)->all();
+
+        static::query()->whereIn('id', $ids)
+            ->where('status', '!=', ClientStatus::Active->value)
+            ->get()
+            ->each->ensureActive($doing);
     }
 
     public function isOnMonthlyPlan(): bool

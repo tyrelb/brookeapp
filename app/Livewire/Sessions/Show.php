@@ -82,7 +82,8 @@ class Show extends Component
             return;
         }
 
-        $client = Client::query()->with('activeMembers')->find($clientId);
+        // Only active clients can be booked; the picker hides the others too.
+        $client = Client::query()->active()->with('activeMembers')->find($clientId);
 
         if (! $client || isset($this->attendees[$clientId])) {
             return;

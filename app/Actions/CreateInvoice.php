@@ -26,6 +26,8 @@ class CreateInvoice
         CarbonInterface|string|null $dueOn = null,
         ?string $message = null,
     ): Invoice {
+        $client->ensureActive('requesting a payment');
+
         if ($subtotal <= 0) {
             throw new BillingException('The amount must be greater than zero.');
         }

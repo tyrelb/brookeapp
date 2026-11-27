@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Enums\SessionStatus;
 use App\Exceptions\BillingException;
+use App\Models\Client;
 use App\Models\TrainingSession;
 use Carbon\CarbonImmutable;
 use Illuminate\Support\Facades\DB;
@@ -36,6 +37,8 @@ class LogSessionsInBulk
         if ($attendees === []) {
             throw new BillingException('Add at least one client.');
         }
+
+        Client::ensureAllActive(array_keys($attendees), 'logging sessions for them');
 
         $time = $this->normalizeTime($attributes['time'] ?? null);
 

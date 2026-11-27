@@ -66,6 +66,12 @@ trait ManagesInvoices
             return;
         }
 
+        if (! $invoice->client->isActive()) {
+            Flux::toast("{$invoice->client->full_name} is inactive. Reactivate them before recording a payment.", variant: 'warning');
+
+            return;
+        }
+
         $this->resetValidation(['markPaidAmount', 'markPaidMethod', 'markPaidDate', 'markPaidReference']);
         $this->markPaidId = $invoice->id;
         $this->markPaidAmount = number_format($invoice->outstandingAmount(), 2, '.', '');

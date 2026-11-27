@@ -26,6 +26,8 @@ class PostAdjustment
         CarbonInterface|string|null $on = null,
         ?PaymentMethod $method = null,
     ): WalletTransaction {
+        $client->ensureActive($type === TransactionType::Refund ? 'posting a refund' : 'posting an adjustment');
+
         if (! in_array($type, [TransactionType::Adjustment, TransactionType::Refund], true)) {
             throw new BillingException('Only adjustments and refunds can be posted manually.');
         }

@@ -4,7 +4,9 @@
          was cancelled when it was settled. --}}
     @if ($invoice->isOutstanding())
         <flux:button size="xs" variant="ghost" wire:click="remindInvoice({{ $invoice->id }})" wire:confirm="Email {{ $invoice->client->first_name }} a reminder about {{ $invoice->number }}?">Remind</flux:button>
-        <flux:button size="xs" variant="ghost" wire:click="openMarkPaid({{ $invoice->id }})">Mark paid</flux:button>
+        @if ($invoice->client->isActive())
+            <flux:button size="xs" variant="ghost" wire:click="openMarkPaid({{ $invoice->id }})">Mark paid</flux:button>
+        @endif
         <flux:button size="xs" variant="ghost" wire:click="voidInvoice({{ $invoice->id }})" wire:confirm="Void {{ $invoice->number }}? {{ $invoice->client->first_name }} will no longer be asked for it. Anything already received stays on the ledger.">Void</flux:button>
     @endif
     @if ($invoice->canBeDeleted())
