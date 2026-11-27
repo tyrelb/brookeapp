@@ -27,6 +27,8 @@ class RecordPayment
         ?string $description = null,
         ?Invoice $invoice = null,
     ): WalletTransaction {
+        $client->ensureActive('recording a payment');
+
         if ($amount <= 0) {
             throw new BillingException('Payment amount must be greater than zero.');
         }

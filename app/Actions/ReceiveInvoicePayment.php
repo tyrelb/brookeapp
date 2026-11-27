@@ -36,6 +36,7 @@ class ReceiveInvoicePayment
 
         $invoice->loadMissing('client.trainer');
         $client = $invoice->client;
+        $client->ensureActive('recording a payment');
 
         $payment = $this->recordPayment->handle($client, $amount, $method, $receivedOn, $reference, null, $invoice);
 

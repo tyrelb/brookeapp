@@ -3,6 +3,7 @@
 namespace App\Actions;
 
 use App\Enums\SessionStatus;
+use App\Models\Client;
 use App\Models\SessionSeries;
 use App\Models\TrainingSession;
 use App\Support\Recurrence;
@@ -23,6 +24,8 @@ class BookSessionSeries
      */
     public function handle(array $pattern, array $attendees, bool $sendInvites = false): SessionSeries
     {
+        Client::ensureAllActive(array_keys($attendees), 'booking sessions for them');
+
         $dates = Recurrence::occurrences($pattern['starts_on'], $pattern['ends_on'], $pattern['weekdays'], $pattern['interval_weeks']);
 
         $series = DB::transaction(function () use ($pattern, $attendees, $dates) {

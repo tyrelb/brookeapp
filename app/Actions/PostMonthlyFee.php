@@ -20,6 +20,8 @@ class PostMonthlyFee
 {
     public function handle(Client $client, CarbonInterface|string|null $period = null, CarbonInterface|string|null $on = null): WalletTransaction
     {
+        $client->ensureActive('posting a monthly fee');
+
         $period = CarbonImmutable::parse($period ?? today())->startOfMonth();
         $billingPeriod = $period->format('Y-m');
         $on = $on !== null ? CarbonImmutable::parse($on) : null;

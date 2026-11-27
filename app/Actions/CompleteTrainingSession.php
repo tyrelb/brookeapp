@@ -41,6 +41,12 @@ class CompleteTrainingSession
                 return $this->completeCover($session, $completedAt);
             }
 
+            // Nothing is charged to an inactive client, and nobody is quietly skipped:
+            // the trainer decides whether to remove them or reactivate them.
+            foreach ($session->attendees as $attendee) {
+                $attendee->client?->ensureActive('completing this session (or remove them from it)');
+            }
+
             $lines = [];
             foreach ($session->attendees as $attendee) {
                 if ($attendee->attended && $attendee->client?->isOnFamilyPlan() && $attendee->members->where('attended', true)->isEmpty()) {

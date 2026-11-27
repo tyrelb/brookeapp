@@ -292,6 +292,12 @@ class Log extends Component
         foreach ($this->attendees as $clientId => $state) {
             $client = $clients[$clientId];
 
+            if (! $client->isActive()) {
+                $this->addError('attendees', "{$client->full_name} is inactive. Reactivate them before booking a session.");
+
+                return;
+            }
+
             if ($client->isOnFamilyPlan() && ! $this->stateAttends($client, $state)) {
                 $this->addError('attendees', $this->stateLateCancelled($state)
                     ? "Tick which {$client->full_name} members were booked."

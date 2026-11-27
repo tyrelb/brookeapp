@@ -10,24 +10,37 @@
             <flux:badge size="sm" class="ml-1" :color="$client->isActive() ? 'green' : 'zinc'">{{ $client->status->label() }}</flux:badge>
         </x-slot:subtitle>
         <x-slot:actions>
-            <flux:modal.trigger name="request-payment">
-                <flux:button icon="paper-airplane" variant="primary">Request payment</flux:button>
-            </flux:modal.trigger>
-            <flux:modal.trigger name="record-payment">
-                <flux:button icon="banknotes">Record payment</flux:button>
-            </flux:modal.trigger>
-            <flux:modal.trigger name="post-adjustment">
-                <flux:button icon="adjustments-horizontal">Adjustment</flux:button>
-            </flux:modal.trigger>
-            @if ($client->isOnMonthlyPlan())
-                <flux:modal.trigger name="post-monthly-fee">
-                    <flux:button icon="calendar">Post monthly fee</flux:button>
+            {{-- An inactive client is closed for new business; see Client::ensureActive(). --}}
+            @if ($client->isActive())
+                <flux:modal.trigger name="request-payment">
+                    <flux:button icon="paper-airplane" variant="primary">Request payment</flux:button>
                 </flux:modal.trigger>
+                <flux:modal.trigger name="record-payment">
+                    <flux:button icon="banknotes">Record payment</flux:button>
+                </flux:modal.trigger>
+                <flux:modal.trigger name="post-adjustment">
+                    <flux:button icon="adjustments-horizontal">Adjustment</flux:button>
+                </flux:modal.trigger>
+                @if ($client->isOnMonthlyPlan())
+                    <flux:modal.trigger name="post-monthly-fee">
+                        <flux:button icon="calendar">Post monthly fee</flux:button>
+                    </flux:modal.trigger>
+                @endif
+                <flux:button :href="route('sessions.log')" icon="plus" wire:navigate>Log session</flux:button>
             @endif
-            <flux:button :href="route('sessions.log')" icon="plus" wire:navigate>Log session</flux:button>
             <flux:button :href="route('clients.edit', $client)" icon="pencil-square" wire:navigate>Edit</flux:button>
         </x-slot:actions>
     </x-page-header>
+
+    @unless ($client->isActive())
+        <flux:callout variant="warning" icon="no-symbol">
+            <flux:callout.heading>This client is inactive</flux:callout.heading>
+            <flux:callout.text>
+                Payments, charges, adjustments, payment requests and sessions are turned off. You can still edit or void what's already here.
+                <flux:link :href="route('clients.edit', $client)" wire:navigate>Edit the client</flux:link> and set them to Active to turn these back on.
+            </flux:callout.text>
+        </flux:callout>
+    @endunless
 
     <div class="grid gap-4 md:grid-cols-3">
         <div class="rounded-xl border border-zinc-200 bg-white p-5 dark:border-zinc-700 dark:bg-zinc-900">
@@ -39,7 +52,7 @@
                     · about {{ $sessionsLeft }} {{ Str::plural('session', $sessionsLeft) }} left
                 @endif
             </div>
-            @if ($runningLow)
+            @if ($runningLow && $client->isActive())
                 <flux:modal.trigger name="request-payment">
                     <flux:button size="xs" icon="paper-airplane" class="mt-3">Ask for a top-up</flux:button>
                 </flux:modal.trigger>
@@ -226,6 +239,8 @@
         @endif
     </section>
 
+    {{-- New-activity forms exist only while the client is active. --}}
+    @if ($client->isActive())
     <flux:modal name="request-payment" class="md:w-[30rem]">
         <form wire:submit="requestPayment" class="space-y-5">
             <div>
@@ -281,9 +296,11 @@
             </div>
         </form>
     </flux:modal>
+    @endif
 
     @include('livewire.invoices.partials.mark-paid-modal')
 
+    @if ($client->isActive())
     <flux:modal name="record-payment" class="md:w-[28rem]">
         <form wire:submit="recordPayment" class="space-y-5">
             <div>
@@ -361,6 +378,7 @@
                 </div>
             </form>
         </flux:modal>
+    @endif
     @endif
 
     <flux:modal name="edit-transaction" class="md:w-[30rem]">
