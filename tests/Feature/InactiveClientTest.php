@@ -8,6 +8,7 @@ use App\Actions\RecordPayment;
 use App\Enums\ClientStatus;
 use App\Enums\PaymentMethod;
 use App\Enums\SessionStatus;
+use App\Enums\TransactionType;
 use App\Exceptions\BillingException;
 use App\Livewire\Clients\Show;
 use App\Livewire\Sessions\Log;
@@ -54,18 +55,35 @@ function deactivate(Client $client): Client
     return $client->fresh();
 }
 
-it('refuses every new money movement in the actions', function (Closure $do) {
+it('refuses a payment for an inactive client', function () {
     $client = deactivate($this->client);
 
-    expect(fn () => $do($client))->toThrow(BillingException::class, 'Ava Stone is inactive.');
+    expect(fn () => app(RecordPayment::class)->handle($client, 100, PaymentMethod::Cash))
+        ->toThrow(BillingException::class, 'Ava Stone is inactive. Reactivate them before recording a payment.');
 
-    expect(WalletTransaction::where('client_id', $client->id)->count())->toBe(0)
-        ->and(Invoice::where('client_id', $client->id)->count())->toBe(0);
-})->with([
-    'payment' => fn () => fn (Client $c) => app(RecordPayment::class)->handle($c, 100, PaymentMethod::Cash),
-    'adjustment' => fn () => fn (Client $c) => app(PostAdjustment::class)->handle($c, 10, 'Goodwill'),
-    'payment request' => fn () => fn (Client $c) => app(CreateInvoice::class)->handle($c, 100),
-]);
+    expect(WalletTransaction::where('client_id', $client->id)->count())->toBe(0);
+});
+
+it('refuses an adjustment or refund for an inactive client', function () {
+    $client = deactivate($this->client);
+
+    expect(fn () => app(PostAdjustment::class)->handle($client, 10, 'Goodwill'))
+        ->toThrow(BillingException::class, 'Reactivate them before posting an adjustment.');
+
+    expect(fn () => app(PostAdjustment::class)->handle($client, 10, 'Refund', TransactionType::Refund, null, PaymentMethod::Cash))
+        ->toThrow(BillingException::class, 'Reactivate them before posting a refund.');
+
+    expect(WalletTransaction::where('client_id', $client->id)->count())->toBe(0);
+});
+
+it('refuses a payment request for an inactive client', function () {
+    $client = deactivate($this->client);
+
+    expect(fn () => app(CreateInvoice::class)->handle($client, 100))
+        ->toThrow(BillingException::class, 'Reactivate them before requesting a payment.');
+
+    expect(Invoice::where('client_id', $client->id)->count())->toBe(0);
+});
 
 it('refuses a monthly fee for an inactive monthly client', function () {
     $monthly = Plan::factory()->monthly()->create(['user_id' => $this->trainer->id]);
